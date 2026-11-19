@@ -1,32 +1,18 @@
-# React + TypeScript + Vite
+# Virtual Lab Library — Digital Engineering Education Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Complete iPad-friendly **React 19 + TypeScript + Vite + Tailwind CSS + Three.js 3D + Scientific Simulation Engine + Supabase + Admin CMS** web application.
 
-Currently, two official plugins are available:
+## Quick Unpack & Run in GitHub Codespaces (iPad Safari)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Upload `virtual-lab-library.zip` into your GitHub Codespace file explorer sidebar.
+2. Paste this single command into your Codespaces Terminal:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+unzip -o virtual-lab-library.zip && npm install && npm run dev -- --host
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+3. Push to GitHub and deploy on Vercel:
+
+```bash
+git add . && git commit -m "Complete Virtual Lab Library platform" && git push origin main
+```
