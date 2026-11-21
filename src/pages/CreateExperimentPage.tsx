@@ -21,6 +21,7 @@ import {
   Square,
 } from 'lucide-react'
 import { useLabStore } from '../context/LabStoreContext'
+import { supabase } from '../lib/supabase'
 import { DEFAULT_SECTIONS_CONFIG } from '../data/initialData'
 import type {
   Experiment,
@@ -142,6 +143,50 @@ export function CreateExperimentPage() {
   const [circuitDiagramSvgType, setCircuitDiagramSvgType] = useState<
     'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
   >(existingExp?.circuitDiagramSvgType || 'dc-shunt')
+  const [circuitDiagramImageUrl, setCircuitDiagramImageUrl] = useState<string>(existingExp?.circuitDiagramImageUrl || '')
+  const [uploadingDiagram, setUploadingDiagram] = useState(false)
+
+  const handleCircuitImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingDiagram(true)
+    try {
+      if (supabase) {
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase()
+        const filePath = `circuit-diagrams/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('lab-assets')
+          .upload(filePath, file, { upsert: true, contentType: file.type })
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('lab-assets').getPublicUrl(filePath)
+          if (data?.publicUrl) {
+            setCircuitDiagramImageUrl(data.publicUrl)
+            setUploadingDiagram(false)
+            return
+          }
+        }
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const maxW = 1200
+          const scale = img.width > maxW ? maxW / img.width : 1
+          canvas.width = Math.round(img.width * scale)
+          canvas.height = Math.round(img.height * scale)
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+          setCircuitDiagramImageUrl(canvas.toDataURL('image/webp', 0.82))
+          setUploadingDiagram(false)
+        }
+        img.src = String(reader.result || '')
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      setUploadingDiagram(false)
+    }
+  }
   const [circuitDiagramDescription, setCircuitDiagramDescription] = useState<string>(
     existingExp?.circuitDiagramDescription ||
       'Standard laboratory circuit schematic with supply, rheostats, and instrumentation.'
@@ -430,6 +475,7 @@ export function CreateExperimentPage() {
       equations,
       circuitDiagramSvgType,
       circuitDiagramDescription,
+      ...(circuitDiagramImageUrl ? { circuitDiagramImageUrl } : {}),
       has3dModel,
       model3dSource,
       model3dPreset,
@@ -929,6 +975,49 @@ export function CreateExperimentPage() {
                 className={inputClassName}
               />
             </FormField>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Custom Circuit Diagram Image (Optional — Syncs Across All Devices)
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Upload a PNG, JPG, SVG, or WebP circuit schematic to display instead of the default diagram.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold cursor-pointer">
+                  <span>{uploadingDiagram ? 'Uploading...' : circuitDiagramImageUrl ? 'Replace Image' : 'Upload Circuit Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCircuitImageUpload}
+                    disabled={uploadingDiagram}
+                    className="hidden"
+                  />
+                </label>
+                {circuitDiagramImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setCircuitDiagramImageUrl('')}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {circuitDiagramImageUrl && (
+              <div className="bg-white border border-slate-200 rounded-xl p-3 flex justify-center">
+                <img
+                  src={circuitDiagramImageUrl}
+                  alt="Circuit Diagram Preview"
+                  className="max-h-64 w-auto rounded-lg object-contain"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

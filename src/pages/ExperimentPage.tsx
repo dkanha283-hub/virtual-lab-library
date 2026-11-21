@@ -367,6 +367,15 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
               <p className="text-xs text-slate-500 mt-0.5">{exp.circuitDiagramDescription}</p>
             </div>
 
+            {exp.circuitDiagramImageUrl ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center">
+                <img
+                  src={exp.circuitDiagramImageUrl}
+                  alt={exp.title + " Circuit Diagram"}
+                  className="w-full max-w-3xl max-h-[460px] object-contain rounded-xl"
+                />
+              </div>
+            ) : (
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center">
               <svg viewBox="0 0 680 210" className="w-full max-w-3xl h-auto">
                 <rect x="10" y="10" width="660" height="190" rx="14" fill="#090d16" stroke="#1e293b" strokeWidth="2" />
@@ -397,6 +406,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                 <line x1="580" y1="125" x2="580" y2="165" stroke="#a855f7" strokeWidth="2" />
               </svg>
             </div>
+            )}
           </Card>
 
           {exp.has3dModel && (

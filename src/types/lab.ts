@@ -98,6 +98,7 @@ export interface Experiment {
   equations: EquationItem[]
   circuitDiagramSvgType: 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
   circuitDiagramDescription: string
+  circuitDiagramImageUrl?: string
   has3dModel: boolean
   model3dSource?: 'preset' | 'custom_html'
   model3dPreset: ModelPresetId
