@@ -29,6 +29,7 @@ interface LabStoreContextType {
   updateExperiment: (exp: Experiment) => void
   deleteExperiment: (id: string) => void
   resetToFactoryDefaults: () => void
+  syncAllToCloud: () => Promise<void>
   supabaseConnected: boolean
   cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'offline'
   cloudSyncMessage: string
@@ -330,6 +331,26 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const syncAllToCloud = async () => {
+    if (!supabase) {
+      setCloudSyncStatus('offline')
+      setCloudSyncMessage('Supabase not configured')
+      return
+    }
+    setCloudSyncStatus('syncing')
+    setCloudSyncMessage('Syncing all departments, labs & experiments...')
+    try {
+      for (const dept of departments) await syncDepartmentToCloud(dept)
+      for (const lab of laboratories) await syncLabToCloud(lab)
+      for (const exp of experiments) await syncExperimentToCloud(exp)
+      setCloudSyncStatus('synced')
+      setCloudSyncMessage(`Synced ${experiments.length} experiments to Cloud`)
+    } catch (err: any) {
+      setCloudSyncStatus('offline')
+      setCloudSyncMessage(`Sync failed: ${err?.message || 'Unknown error'}`)
+    }
+  }
+
   const userEmail = adminSessionEmail || 'student@vlab.edu.in'
   const userName = isAdminAuthenticated ? 'Administrator' : 'Student Visitor'
 
@@ -423,6 +444,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
         updateExperiment,
         deleteExperiment,
         resetToFactoryDefaults,
+        syncAllToCloud,
         supabaseConnected: isSupabaseConfigured,
         cloudSyncStatus,
         cloudSyncMessage,

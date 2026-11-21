@@ -19,6 +19,7 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
 } from 'lucide-react'
 import { useLabStore } from '../../context/LabStoreContext'
 import { cn } from '../../lib/utils'
@@ -34,6 +35,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     recentLabIds,
     recentExperimentIds,
     bookmarkedExperimentIds,
+    cloudSyncStatus,
+    cloudSyncMessage,
+    syncAllToCloud,
   } = useLabStore()
 
   const location = useLocation()
@@ -270,6 +274,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span>Create</span>
             </Button>
           </Link>
+
+          {isAdminAuthenticated && (
+            <button
+              onClick={syncAllToCloud}
+              disabled={cloudSyncStatus === 'syncing'}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors",
+                cloudSyncStatus === 'offline'
+                  ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                  : "bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200"
+              )}
+              title={cloudSyncMessage || "Sync all local changes to Supabase Cloud"}
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", cloudSyncStatus === 'syncing' && "animate-spin")} />
+              <span className="hidden sm:inline">
+                {cloudSyncStatus === 'syncing' ? 'Syncing...' : 'Sync'}
+              </span>
+            </button>
+          )}
 
           <button
             onClick={() => {
