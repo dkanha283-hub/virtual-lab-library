@@ -360,7 +360,18 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     setCloudSyncStatus('syncing')
     setCloudSyncMessage('Fast syncing all changes to Cloud...')
     try {
-      const currentDeleted: string[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]")
+      const storedDeleted: string[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]")
+      const activeDeptIds = new Set(departments.map((d) => d.id))
+      const activeLabIds = new Set(laboratories.map((l) => l.id))
+      const activeExpIds = new Set(experiments.map((e) => e.id))
+      const missingDefaults = [
+        ...INITIAL_DEPARTMENTS.filter((d) => !activeDeptIds.has(d.id)).map((d) => d.id),
+        ...INITIAL_LABORATORIES.filter((l) => !activeLabIds.has(l.id)).map((l) => l.id),
+        ...INITIAL_EXPERIMENTS.filter((e) => !activeExpIds.has(e.id)).map((e) => e.id),
+      ]
+      const currentDeleted = Array.from(new Set([...storedDeleted, ...missingDefaults]))
+      localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(currentDeleted))
+      setDeletedIds(currentDeleted)
       await Promise.all([
         ...departments.map((d) => syncDepartmentToCloud(d)),
         ...laboratories.map((l) => syncLabToCloud(l)),
