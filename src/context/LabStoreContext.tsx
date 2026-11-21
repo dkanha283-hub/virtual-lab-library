@@ -45,6 +45,7 @@ const STORAGE_KEYS = {
   RECENT_LABS: 'vll_recent_labs_v2',
   RECENT_EXPS: 'vll_recent_exps_v2',
   BOOKMARKS: 'vll_bookmarks_v2',
+  DELETED_IDS: 'vll_deleted_ids_v1',
 }
 
 const CONFIGURED_ADMIN_EMAIL =
@@ -86,6 +87,10 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
       try { return JSON.parse(saved) } catch { /* fallback */ }
     }
     return INITIAL_EXPERIMENTS
+  })
+
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]") } catch { return [] }
   })
 
   const [recentLabIds, setRecentLabIds] = useState<string[]>(() => {
@@ -155,7 +160,8 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
           }))
           setDepartments((prev) => {
             const ids = new Set(mappedDepts.map((d) => d.id))
-            return [...mappedDepts, ...prev.filter((d) => !ids.has(d.id))]
+            const del = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]"))
+            return [...mappedDepts, ...prev.filter((d) => !ids.has(d.id))].filter((d) => !del.has(d.id))
           })
         }
 
@@ -178,7 +184,8 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
           }))
           setLaboratories((prev) => {
             const ids = new Set(mappedLabs.map((l) => l.id))
-            return [...mappedLabs, ...prev.filter((l) => !ids.has(l.id))]
+            const del = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]"))
+            return [...mappedLabs, ...prev.filter((l) => !ids.has(l.id))].filter((l) => !del.has(l.id))
           })
         }
 
@@ -189,7 +196,8 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
           if (mappedExps.length > 0) {
             setExperiments((prev) => {
               const ids = new Set(mappedExps.map((e) => e.id))
-              return [...mappedExps, ...prev.filter((e) => !ids.has(e.id))]
+              const del = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]"))
+              return [...mappedExps, ...prev.filter((e) => !ids.has(e.id))].filter((e) => !del.has(e.id))
             })
           }
         }
@@ -211,6 +219,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.RECENT_LABS, JSON.stringify(recentLabIds)) }, [recentLabIds])
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.RECENT_EXPS, JSON.stringify(recentExperimentIds)) }, [recentExperimentIds])
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarkedExperimentIds)) }, [bookmarkedExperimentIds])
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(deletedIds)) }, [deletedIds])
 
   const isAdminAuthenticated = Boolean(adminSessionEmail)
   const role: UserRole = isAdminAuthenticated ? 'admin' : 'student'
@@ -338,13 +347,23 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
       return
     }
     setCloudSyncStatus('syncing')
-    setCloudSyncMessage('Syncing all departments, labs & experiments...')
+    setCloudSyncMessage('Fast syncing all changes to Cloud...')
     try {
-      for (const dept of departments) await syncDepartmentToCloud(dept)
-      for (const lab of laboratories) await syncLabToCloud(lab)
-      for (const exp of experiments) await syncExperimentToCloud(exp)
+      const currentDeleted: string[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]")
+      await Promise.all([
+        ...departments.map((d) => syncDepartmentToCloud(d)),
+        ...laboratories.map((l) => syncLabToCloud(l)),
+        ...experiments.map((e) => syncExperimentToCloud(e)),
+        ...(currentDeleted.length > 0
+          ? [
+              supabase.from('experiments').delete().in('id', currentDeleted),
+              supabase.from('laboratories').delete().in('id', currentDeleted),
+              supabase.from('departments').delete().in('id', currentDeleted),
+            ]
+          : []),
+      ])
       setCloudSyncStatus('synced')
-      setCloudSyncMessage(`Synced ${experiments.length} experiments to Cloud`)
+      setCloudSyncMessage(`Fast-synced ${laboratories.length} labs & ${experiments.length} experiments`)
     } catch (err: any) {
       setCloudSyncStatus('offline')
       setCloudSyncMessage(`Sync failed: ${err?.message || 'Unknown error'}`)
@@ -377,6 +396,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     syncDepartmentToCloud(dept)
   }
   const deleteDepartment = (id: string) => {
+    setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setDepartments((prev) => prev.filter((d) => d.id !== id))
     if (supabase) supabase!.from('departments').delete().eq('id', id)
   }
@@ -390,6 +410,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     syncLabToCloud(lab)
   }
   const deleteLaboratory = (id: string) => {
+    setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setLaboratories((prev) => prev.filter((l) => l.id !== id))
     if (supabase) supabase!.from('laboratories').delete().eq('id', id)
   }
@@ -403,6 +424,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     syncExperimentToCloud(exp)
   }
   const deleteExperiment = (id: string) => {
+    setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setExperiments((prev) => prev.filter((e) => e.id !== id))
     if (supabase) supabase!.from('experiments').delete().eq('id', id)
   }
