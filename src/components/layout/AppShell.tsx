@@ -14,26 +14,21 @@ import {
   Plus,
   Search,
   Cpu,
-  UserCheck,
+  Lock,
+  LogOut,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
 import { useLabStore } from '../../context/LabStoreContext'
-import type { UserRole } from '../../types/lab'
 import { cn } from '../../lib/utils'
 import { Button, Badge } from '../ui/DesignSystem'
 
-const ROLE_LABELS: { id: UserRole; label: string }[] = [
-  { id: 'student', label: 'Student' },
-  { id: 'instructor', label: 'Instructor' },
-  { id: 'admin', label: 'Admin' },
-]
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const {
-    role,
-    setRole,
+    isAdminAuthenticated,
+    logoutAdmin,
+    userEmail,
     laboratories,
     experiments,
     recentLabIds,
@@ -44,7 +39,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Sidebar open on desktop by default, drawer on mobile/portrait iPad
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
@@ -58,8 +52,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     .filter((e): e is NonNullable<typeof e> => Boolean(e))
     .slice(0, 4)
 
-  const canCreate = role === 'instructor' || role === 'admin'
-
   const primaryNav = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/departments', label: 'All Departments', icon: Building2 },
@@ -72,18 +64,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       icon: Bookmark,
       badge: bookmarkedExperimentIds.length,
     },
-    ...(canCreate
-      ? [{ to: '/contributions', label: 'My Contributions', icon: FileEdit }]
-      : []),
-    ...(role === 'admin'
-      ? [{ to: '/admin', label: 'Admin Panel', icon: ShieldCheck }]
-      : []),
+    ...(isAdminAuthenticated
+      ? [
+          { to: '/contributions', label: 'My Contributions', icon: FileEdit },
+          { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
+        ]
+      : [{ to: '/login', label: 'Admin Login', icon: Lock }]),
   ]
 
   const renderSidebarContent = (onItemClick?: () => void) => (
     <div className="flex flex-col h-full justify-between py-4 px-3.5 space-y-6 overflow-y-auto">
       <div className="space-y-6">
-        {/* Primary Navigation Links */}
         <nav className="space-y-1">
           <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
             Navigation Menu
@@ -125,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Wireframe Card 1: Recently Visited Labs */}
+        {/* Recent Visited Labs */}
         <div className="bg-slate-100/90 border border-slate-200/90 rounded-2xl p-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 px-1">
             <History className="w-3.5 h-3.5 text-teal-700 shrink-0" />
@@ -156,7 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {/* Wireframe Card 2: Recently Visited Experiments */}
+        {/* Recent Visited Experiments */}
         <div className="bg-slate-100/90 border border-slate-200/90 rounded-2xl p-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 px-1">
             <History className="w-3.5 h-3.5 text-sky-700 shrink-0" />
@@ -189,42 +180,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Role Switcher Card at Bottom of Sidebar */}
+      {/* Auth Status Footer in Sidebar */}
       <div className="pt-3 border-t border-slate-200 space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Active Role
-          </span>
-          <Badge tone="teal" className="uppercase">
-            {role}
-          </Badge>
-        </div>
-        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          {ROLE_LABELS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRole(r.id)}
-              className={cn(
-                'py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer',
-                role === r.id
-                  ? 'bg-white text-teal-800 shadow-2xs border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
+        {isAdminAuthenticated ? (
+          <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Badge tone="teal">Admin Authenticated</Badge>
+            </div>
+            <div className="text-[11px] font-medium text-slate-700 truncate">
+              {userEmail}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={async () => {
+                await logoutAdmin()
+                if (onItemClick) onItemClick()
+                navigate('/')
+              }}
             >
-              {r.label}
-            </button>
-          ))}
-        </div>
+              <LogOut className="w-3.5 h-3.5" /> Sign Out
+            </Button>
+          </div>
+        ) : (
+          <Link to="/login" onClick={onItemClick} className="block">
+            <Button variant="outline" size="sm" className="w-full">
+              <Lock className="w-3.5 h-3.5 text-teal-700" />
+              Admin Sign In
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   )
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Top Header (Matches Wireframe: Left Menu Toggle + Brand, Right Create Pill + Search + Role/Profile) */}
       <header className="sticky top-0 z-40 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Mobile / iPad Portrait Drawer Button */}
           <button
             onClick={() => setMobileDrawerOpen(true)}
             className="lg:hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200 cursor-pointer"
@@ -233,7 +227,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Desktop / iPad Landscape Sidebar Collapse Toggle */}
           <button
             onClick={() => setDesktopSidebarCollapsed(!desktopSidebarCollapsed)}
             className="hidden lg:inline-flex p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200 cursor-pointer"
@@ -246,7 +239,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </button>
 
-          {/* Application Logo & Name */}
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-xs">
               <Cpu className="w-5 h-5" />
@@ -262,32 +254,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        {/* Right Actions: Create Button (Wireframe Green Pill) + Search Icon + Role Switcher */}
+        {/* Right Header Actions: Create (Protected) + Search + Admin Auth */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {canCreate ? (
-            <Link to="/create">
-              <Button
-                variant="primary"
-                size="md"
-                className="rounded-full px-4 sm:px-5 bg-teal-700 hover:bg-teal-800"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create</span>
-              </Button>
-            </Link>
-          ) : (
-            <button
-              onClick={() => {
-                setRole('instructor')
-                navigate('/create')
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 text-xs font-semibold cursor-pointer"
-              title="Switch to Instructor to use Create Workspace"
+          <Link to={isAdminAuthenticated ? '/create' : '/login?redirect=/create'}>
+            <Button
+              variant="primary"
+              size="md"
+              className="rounded-full px-4 sm:px-5 bg-teal-700 hover:bg-teal-800"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create (Instructor)</span>
-            </button>
-          )}
+              {isAdminAuthenticated ? (
+                <Plus className="w-4 h-4" />
+              ) : (
+                <Lock className="w-3.5 h-3.5" />
+              )}
+              <span>Create</span>
+            </Button>
+          </Link>
 
           <button
             onClick={() => {
@@ -304,30 +286,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Compact Header Role Switcher for Quick Testing */}
-          <div className="hidden sm:flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 gap-0.5">
-            <UserCheck className="w-3.5 h-3.5 text-slate-500 ml-2 mr-1" />
-            {ROLE_LABELS.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setRole(r.id)}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                  role === r.id
-                    ? 'bg-white text-teal-800 shadow-2xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900'
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          {isAdminAuthenticated ? (
+            <button
+              onClick={async () => {
+                await logoutAdmin()
+                navigate('/')
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold cursor-pointer"
+              title={`Signed in as ${userEmail}. Tap to sign out.`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Admin</span>
+              <LogOut className="w-3.5 h-3.5 ml-1 text-slate-500" />
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold"
+            >
+              <Lock className="w-3.5 h-3.5 text-teal-700" />
+              <span>Admin Login</span>
+            </Link>
+          )}
         </div>
       </header>
 
-      {/* Main Body with Collapsible Left Sidebar + Content Viewport */}
       <div className="flex-1 flex">
-        {/* Desktop / Landscape Sidebar */}
         <aside
           className={cn(
             'hidden lg:block bg-white border-r border-slate-200 shrink-0 transition-all duration-200',
@@ -339,7 +323,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* Mobile / Portrait iPad Slide-Over Drawer */}
         {mobileDrawerOpen && (
           <div className="fixed inset-0 z-50 lg:hidden flex">
             <div
@@ -366,21 +349,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Primary Page Content */}
         <main className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex-1">{children}</div>
 
           <footer className="bg-white border-t border-slate-200 mt-16 py-6 px-4 sm:px-8 text-xs text-slate-500">
             <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <strong className="text-slate-800">Virtual Lab Library</strong> — Centralized Digital Engineering Laboratory Platform
+                <strong className="text-slate-800">Virtual Lab Library</strong> — Password-Protected Engineering Lab &amp; HTML 3D Platform
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <Link to="/departments" className="hover:text-teal-700">Departments</Link>
                 <Link to="/laboratories" className="hover:text-teal-700">Laboratories</Link>
                 <Link to="/experiments" className="hover:text-teal-700">Experiments</Link>
-                <Link to="/create" className="text-teal-700 font-semibold inline-flex items-center gap-0.5">
-                  Create Experiment <ChevronRight className="w-3.5 h-3.5" />
+                <Link to={isAdminAuthenticated ? '/admin' : '/login'} className="text-teal-700 font-semibold inline-flex items-center gap-0.5">
+                  {isAdminAuthenticated ? 'Admin Panel' : 'Admin Login'} <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>

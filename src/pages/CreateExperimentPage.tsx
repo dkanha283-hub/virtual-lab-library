@@ -39,6 +39,8 @@ import {
   inputClassName,
 } from '../components/ui/DesignSystem'
 import { Engineering3DViewer } from '../components/viewer3d/Engineering3DViewer'
+import { SandboxedHtmlLabViewer } from '../components/viewer3d/SandboxedHtmlLabViewer'
+import { AdminLoginCard } from '../components/auth/AdminLoginCard'
 import { VirtualLabSimulator } from '../components/simulation/VirtualLabSimulator'
 import { cn } from '../lib/utils'
 
@@ -64,7 +66,7 @@ export function CreateExperimentPage() {
   const navigate = useNavigate()
   const {
     role,
-    setRole,
+    isAdminAuthenticated,
     userName,
     departments,
     laboratories,
@@ -174,17 +176,89 @@ export function CreateExperimentPage() {
       '1. Standard B.Tech Engineering Laboratory Curriculum Manual.\n2. IEEE / NPTEL Virtual Laboratory Reference Texts.'
   )
 
-  // Step 3 State: 3D Model & Simulation (Wireframe Panel 3 Checkboxes + Safe Config + Live Preview)
+  // Step 3 State: 3D Model & Simulation (Wireframe Panel 3 Checkboxes + Safe Config + HTML Import + Live Preview)
   const [has3dModel, setHas3dModel] = useState<boolean>(existingExp?.has3dModel ?? true)
+  const [model3dSource, setModel3dSource] = useState<'preset' | 'custom_html'>(
+    existingExp?.model3dSource || 'preset'
+  )
   const [model3dPreset, setModel3dPreset] = useState<ModelPresetId>(
     existingExp?.model3dPreset || 'dc-shunt-motor'
   )
   const [customGlbUrl, setCustomGlbUrl] = useState<string>(existingExp?.customGlbUrl || '')
+  const [customModelHtml, setCustomModelHtml] = useState<string>(existingExp?.customModelHtml || '')
   const [hasSimulation, setHasSimulation] = useState<boolean>(existingExp?.hasSimulation ?? true)
+  const [simulationSource, setSimulationSource] = useState<'preset' | 'custom_html'>(
+    existingExp?.simulationSource || 'preset'
+  )
   const [simulationPreset, setSimulationPreset] = useState<SimulationPresetId>(
     existingExp?.simulationPreset || 'dc-motor-speed-control'
   )
+  const [customSimulationHtml, setCustomSimulationHtml] = useState<string>(
+    existingExp?.customSimulationHtml || ''
+  )
   const [previewTab, setPreviewTab] = useState<'3d' | 'sim'>('3d')
+
+  const SAMPLE_3D_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  body { margin:0; background:#090d16; color:#e2e8f0; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; overflow:hidden; }
+  canvas { border:1px solid #1e293b; border-radius:14px; background:#0f172a; max-width:92%; }
+  .bar { margin-top:12px; display:flex; gap:12px; align-items:center; font-size:13px; }
+</style>
+</head>
+<body>
+  <canvas id="c" width="520" height="300"></canvas>
+  <div class="bar">
+    <label>Rotor Speed (RPM): <strong id="val">1500</strong></label>
+    <input id="rpm" type="range" min="300" max="3000" value="1500" />
+  </div>
+  <script>
+    const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+    const slider = document.getElementById('rpm'), val = document.getElementById('val');
+    let angle = 0;
+    slider.oninput = () => val.textContent = slider.value;
+    function draw() {
+      ctx.clearRect(0,0,520,300);
+      ctx.save(); ctx.translate(260,150);
+      ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(0,0,105,0,Math.PI*2); ctx.stroke();
+      ctx.rotate(angle);
+      for(let i=0;i<6;i++){
+        ctx.rotate(Math.PI/3);
+        ctx.fillStyle = i%2===0 ? '#f59e0b' : '#38bdf8';
+        ctx.fillRect(-10,-80,20,65);
+      }
+      ctx.fillStyle = '#e2e8f0'; ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      angle += (Number(slider.value)/1500)*0.04;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>`
+
+  const handleHtmlFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    target: '3d' | 'sim'
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : ''
+      if (target === '3d') {
+        setModel3dSource('custom_html')
+        setCustomModelHtml(text)
+      } else {
+        setSimulationSource('custom_html')
+        setCustomSimulationHtml(text)
+      }
+    }
+    reader.readAsText(file)
+  }
 
   // Step 4 State: PDF, PPT & Resource Uploads (Wireframe Panel 3 Checkbox + Import + Validation)
   const [hasDocuments, setHasDocuments] = useState<boolean>(true)
@@ -203,28 +277,13 @@ export function CreateExperimentPage() {
   const [uploadError, setUploadError] = useState<string>('')
   const [uploadProgress, setUploadProgress] = useState<number>(0)
 
-  // Role Permission Guard
-  if (role === 'student') {
+  // Password-Protected Admin Authentication Guard
+  if (!isAdminAuthenticated) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
-          <ShieldAlert className="w-7 h-7" />
-        </div>
-        <h1 className="text-2xl font-extrabold text-slate-900">
-          Instructor or Administrator Permission Required
-        </h1>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          You are currently signed in as a <strong>Student</strong>. Only authorized Instructors and Administrators can create or publish laboratory experiments.
-        </p>
-        <div className="flex justify-center gap-3 pt-2">
-          <Button variant="primary" onClick={() => setRole('instructor')}>
-            Switch to Instructor Role
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            Return Home
-          </Button>
-        </div>
-      </div>
+      <AdminLoginCard
+        title="Admin Login Required to Create & Import Labs"
+        subtitle="Creating experiments and importing HTML 3D models or virtual labs is password-protected. Please sign in with your Administrator credentials."
+      />
     )
   }
 
@@ -372,10 +431,14 @@ export function CreateExperimentPage() {
       circuitDiagramSvgType,
       circuitDiagramDescription,
       has3dModel,
+      model3dSource,
       model3dPreset,
       customGlbUrl: customGlbUrl.trim() || undefined,
+      customModelHtml: customModelHtml.trim() || undefined,
       hasSimulation,
+      simulationSource,
       simulationPreset,
+      customSimulationHtml: customSimulationHtml.trim() || undefined,
       procedure: procedureText
         .split('\n')
         .map((s) => s.trim())
@@ -1087,58 +1150,159 @@ export function CreateExperimentPage() {
               </div>
 
               {has3dModel && (
-                <div className="space-y-4">
-                  <FormField
-                    label="Approved Three.js 3D Engineering Assembly"
-                    hint="Secure, touch-optimized procedural & CAD assembly viewer"
-                  >
-                    <select
-                      value={model3dPreset}
-                      onChange={(e) => setModel3dPreset(e.target.value as ModelPresetId)}
-                      className={inputClassName}
-                    >
-                      <option value="dc-shunt-motor">4-Pole DC Shunt Motor (Cutaway &amp; Exploded)</option>
-                      <option value="rlc-workbench">Series R-L-C &amp; Dual-Channel DSO Workbench</option>
-                      <option value="centrifugal-pump">Single-Stage Volute Centrifugal Pump</option>
-                      <option value="three-phase-induction">3-Phase Squirrel-Cage Induction Motor</option>
-                      <option value="logic-gate-ic-trainer">74xx Digital IC Breadboard Trainer</option>
-                    </select>
-                  </FormField>
+                <div className="space-y-3 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900">3D Model Source</span>
+                    <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setModel3dSource('preset')}
+                        className={cn(
+                          'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
+                          model3dSource === 'preset' ? 'bg-teal-700 text-white' : 'text-slate-600'
+                        )}
+                      >
+                        Built-in 3D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModel3dSource('custom_html')}
+                        className={cn(
+                          'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
+                          model3dSource === 'custom_html' ? 'bg-teal-700 text-white' : 'text-slate-600'
+                        )}
+                      >
+                        HTML Code / File
+                      </button>
+                    </div>
+                  </div>
 
-                  <FormField
-                    label="Optional Custom .GLB / .GLTF Model URL or Asset Name"
-                    hint="Only validated .glb/.gltf 3D asset paths are accepted (arbitrary scripts are blocked)"
-                  >
-                    <input
-                      type="text"
-                      value={customGlbUrl}
-                      onChange={(e) => setCustomGlbUrl(e.target.value)}
-                      placeholder="https://cdn.vlab.edu.in/models/custom-machine.glb"
-                      className={inputClassName}
-                    />
-                  </FormField>
+                  {model3dSource === 'preset' ? (
+                    <FormField label="Approved Three.js 3D Engineering Assembly">
+                      <select
+                        value={model3dPreset}
+                        onChange={(e) => setModel3dPreset(e.target.value as ModelPresetId)}
+                        className={inputClassName}
+                      >
+                        <option value="dc-shunt-motor">4-Pole DC Shunt Motor (Cutaway &amp; Exploded)</option>
+                        <option value="rlc-workbench">Series R-L-C &amp; Dual-Channel DSO Workbench</option>
+                        <option value="centrifugal-pump">Single-Stage Volute Centrifugal Pump</option>
+                        <option value="three-phase-induction">3-Phase Squirrel-Cage Induction Motor</option>
+                        <option value="logic-gate-ic-trainer">74xx Digital IC Breadboard Trainer</option>
+                      </select>
+                    </FormField>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-[11px] font-bold cursor-pointer">
+                          <Upload className="w-3.5 h-3.5" />
+                          Import .HTML 3D File
+                          <input
+                            type="file"
+                            accept=".html,.htm"
+                            onChange={(e) => handleHtmlFileUpload(e, '3d')}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomModelHtml(SAMPLE_3D_HTML)
+                            setPreviewTab('3d')
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        >
+                          Load Sample HTML
+                        </button>
+                      </div>
+                      <FormField
+                        label="3D Model HTML Code (<paste code here>)"
+                        hint="Paste a complete single-file Three.js / HTML5 3D model. Executed safely inside an isolated iframe sandbox."
+                      >
+                        <textarea
+                          rows={7}
+                          value={customModelHtml}
+                          onChange={(e) => setCustomModelHtml(e.target.value)}
+                          placeholder="<!DOCTYPE html><html>...paste your Three.js 3D model HTML code here...</html>"
+                          className={`${inputClassName} font-mono text-xs leading-relaxed`}
+                        />
+                      </FormField>
+                    </div>
+                  )}
                 </div>
               )}
 
               {hasSimulation && (
-                <FormField
-                  label="Scientific Simulation Engine Profile"
-                  hint="Computes real-time SI-unit equations, waveforms, and observation tables"
-                >
-                  <select
-                    value={simulationPreset}
-                    onChange={(e) => setSimulationPreset(e.target.value as SimulationPresetId)}
-                    className={inputClassName}
-                  >
-                    <option value="dc-motor-speed-control">DC Shunt Motor Speed &amp; Flux Solver</option>
-                    <option value="series-rlc-resonance">Series R-L-C Frequency Response Solver</option>
-                    <option value="bernoulli-flow-rig">Centrifugal Pump Head &amp; Efficiency Solver</option>
-                  </select>
-                </FormField>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900">Virtual Lab Source</span>
+                    <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setSimulationSource('preset')}
+                        className={cn(
+                          'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
+                          simulationSource === 'preset' ? 'bg-teal-700 text-white' : 'text-slate-600'
+                        )}
+                      >
+                        Built-in Sim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSimulationSource('custom_html')}
+                        className={cn(
+                          'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
+                          simulationSource === 'custom_html' ? 'bg-teal-700 text-white' : 'text-slate-600'
+                        )}
+                      >
+                        HTML Code / File
+                      </button>
+                    </div>
+                  </div>
+
+                  {simulationSource === 'preset' ? (
+                    <FormField label="Scientific Simulation Engine Profile">
+                      <select
+                        value={simulationPreset}
+                        onChange={(e) => setSimulationPreset(e.target.value as SimulationPresetId)}
+                        className={inputClassName}
+                      >
+                        <option value="dc-motor-speed-control">DC Shunt Motor Speed &amp; Flux Solver</option>
+                        <option value="series-rlc-resonance">Series R-L-C Frequency Response Solver</option>
+                        <option value="bernoulli-flow-rig">Centrifugal Pump Head &amp; Efficiency Solver</option>
+                      </select>
+                    </FormField>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-[11px] font-bold cursor-pointer">
+                        <Upload className="w-3.5 h-3.5" />
+                        Import .HTML Virtual Lab File
+                        <input
+                          type="file"
+                          accept=".html,.htm"
+                          onChange={(e) => handleHtmlFileUpload(e, 'sim')}
+                          className="hidden"
+                        />
+                      </label>
+                      <FormField
+                        label="Virtual Lab HTML Code (<paste code here>)"
+                        hint="Paste your single-file HTML5 / Chart.js / Three.js virtual lab simulator."
+                      >
+                        <textarea
+                          rows={6}
+                          value={customSimulationHtml}
+                          onChange={(e) => setCustomSimulationHtml(e.target.value)}
+                          placeholder="<!DOCTYPE html><html>...paste your interactive HTML virtual lab here...</html>"
+                          className={`${inputClassName} font-mono text-xs leading-relaxed`}
+                        />
+                      </FormField>
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 text-[11px] text-teal-900 leading-relaxed">
-                <strong>Security Policy:</strong> Arbitrary user-pasted HTML/JavaScript is disabled to prevent XSS vulnerabilities. All 3D scenes and mathematical solvers run through validated React Three Fiber / Three.js modules.
+                <strong>Admin-Protected &amp; Sandboxed:</strong> Only password-authenticated Administrators can import HTML 3D models or virtual labs. Every imported HTML lab runs inside a strict <code>sandbox=&quot;allow-scripts&quot;</code> iframe isolated from main app sessions and tokens.
               </div>
             </div>
 
@@ -1183,17 +1347,33 @@ export function CreateExperimentPage() {
 
               {previewTab === '3d' ? (
                 has3dModel ? (
-                  <Engineering3DViewer
-                    preset={model3dPreset}
-                    title={title || 'Live 3D Model Preview'}
-                  />
+                  model3dSource === 'custom_html' ? (
+                    <SandboxedHtmlLabViewer
+                      htmlCode={customModelHtml}
+                      title={title || 'Custom HTML 3D Model Preview'}
+                      kind="3D Model"
+                    />
+                  ) : (
+                    <Engineering3DViewer
+                      preset={model3dPreset}
+                      title={title || 'Live 3D Model Preview'}
+                    />
+                  )
                 ) : (
                   <div className="py-16 text-center text-xs text-slate-500">
-                    3D Model is toggled set to &ldquo;No&rdquo;. Toggle &ldquo;Yes&rdquo; above to preview.
+                    3D Model is toggled to &ldquo;No&rdquo;. Toggle &ldquo;Yes&rdquo; above to preview.
                   </div>
                 )
               ) : hasSimulation ? (
-                <VirtualLabSimulator preset={simulationPreset} />
+                simulationSource === 'custom_html' ? (
+                  <SandboxedHtmlLabViewer
+                    htmlCode={customSimulationHtml}
+                    title={title || 'Custom HTML Virtual Lab Preview'}
+                    kind="Virtual Lab Simulation"
+                  />
+                ) : (
+                  <VirtualLabSimulator preset={simulationPreset} />
+                )
               ) : (
                 <div className="py-16 text-center text-xs text-slate-500">
                   Virtual Simulation is toggled to &ldquo;No&rdquo;. Toggle &ldquo;Yes&rdquo; above to preview.
@@ -1435,7 +1615,11 @@ export function CreateExperimentPage() {
                 <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                   <Box className="w-4 h-4 text-teal-700" /> Interactive 3D Assembly Preview
                 </h4>
-                <Engineering3DViewer preset={model3dPreset} title={title || 'Preview'} />
+                {model3dSource === 'custom_html' && customModelHtml ? (
+                  <SandboxedHtmlLabViewer htmlCode={customModelHtml} title={title || 'Preview'} kind="3D Model" />
+                ) : (
+                  <Engineering3DViewer preset={model3dPreset} title={title || 'Preview'} />
+                )}
               </div>
             )}
 
@@ -1444,7 +1628,11 @@ export function CreateExperimentPage() {
                 <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                   <Sliders className="w-4 h-4 text-sky-700" /> Virtual Laboratory Simulator Preview
                 </h4>
-                <VirtualLabSimulator preset={simulationPreset} />
+                {simulationSource === 'custom_html' && customSimulationHtml ? (
+                  <SandboxedHtmlLabViewer htmlCode={customSimulationHtml} title={title || 'Preview'} kind="Virtual Lab Simulation" />
+                ) : (
+                  <VirtualLabSimulator preset={simulationPreset} />
+                )}
               </div>
             )}
 

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useLabStore } from '../context/LabStoreContext'
 import { Engineering3DViewer } from '../components/viewer3d/Engineering3DViewer'
+import { SandboxedHtmlLabViewer } from '../components/viewer3d/SandboxedHtmlLabViewer'
 import { VirtualLabSimulator } from '../components/simulation/VirtualLabSimulator'
 import { Card, Badge, Button } from '../components/ui/DesignSystem'
 import { cn } from '../lib/utils'
@@ -408,11 +409,19 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   <Badge mono tone="teal">Custom GLB: {exp.customGlbUrl}</Badge>
                 )}
               </div>
-              <Engineering3DViewer
-                preset={exp.model3dPreset}
-                title={exp.title}
-                rpm={liveRpm}
-              />
+              {exp.model3dSource === 'custom_html' && exp.customModelHtml ? (
+                <SandboxedHtmlLabViewer
+                  htmlCode={exp.customModelHtml}
+                  title={exp.title}
+                  kind="3D Model"
+                />
+              ) : (
+                <Engineering3DViewer
+                  preset={exp.model3dPreset}
+                  title={exp.title}
+                  rpm={liveRpm}
+                />
+              )}
             </div>
           )}
         </div>
@@ -426,10 +435,18 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
               <h2 className="text-lg font-extrabold text-slate-900">
                 Virtual Laboratory Simulator, Real-Time Graphs &amp; Observation Table
               </h2>
-              <VirtualLabSimulator
-                preset={exp.simulationPreset}
-                onRpmChange={(newRpm) => setLiveRpm(newRpm)}
-              />
+              {exp.simulationSource === 'custom_html' && exp.customSimulationHtml ? (
+                <SandboxedHtmlLabViewer
+                  htmlCode={exp.customSimulationHtml}
+                  title={`${exp.title} — Virtual Lab`}
+                  kind="Virtual Lab Simulation"
+                />
+              ) : (
+                <VirtualLabSimulator
+                  preset={exp.simulationPreset}
+                  onRpmChange={(newRpm) => setLiveRpm(newRpm)}
+                />
+              )}
             </div>
           )}
 

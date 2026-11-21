@@ -20,7 +20,7 @@ import { BookOpen,
   History,
   Sparkles,
   X,
-} from 'lucide-react'
+ } from 'lucide-react'
 import { useLabStore } from '../context/LabStoreContext'
 import { Card, Badge, SectionHeader, EmptyState, Button } from '../components/ui/DesignSystem'
 import { cn } from '../lib/utils'

@@ -1,21 +1,11 @@
 -- ============================================================================
--- VIRTUAL LAB LIBRARY — SUPABASE POSTGRESQL SCHEMA & ROW LEVEL SECURITY (RLS)
+-- VIRTUAL LAB LIBRARY — SUPABASE POSTGRESQL SCHEMA
 -- Paste this into Supabase Dashboard -> SQL Editor -> New Query -> Run
 -- ============================================================================
 
 create extension if not exists "uuid-ossp";
 
--- 1. User Profiles & Role-Based Access Control
-create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
-  email text unique not null,
-  full_name text,
-  role text not null default 'student' check (role in ('public', 'student', 'instructor', 'admin')),
-  assigned_department_id text,
-  created_at timestamptz default now()
-);
-
--- 2. Departments Table
+-- 1. Departments Table
 create table if not exists public.departments (
   id text primary key,
   slug text unique not null,
@@ -23,13 +13,13 @@ create table if not exists public.departments (
   name text not null,
   short_name text not null,
   description text not null,
-  icon_name text not null default 'Cpu',
-  accent_color text not null default 'sky',
+  icon_name text not null default 'Zap',
+  accent_color text not null default 'teal',
   published boolean not null default true,
   created_at timestamptz default now()
 );
 
--- 3. Laboratories Table
+-- 2. Laboratories Table
 create table if not exists public.laboratories (
   id text primary key,
   slug text unique not null,
@@ -39,12 +29,14 @@ create table if not exists public.laboratories (
   semester integer not null default 3,
   description text not null,
   incharge text not null default 'Prof. Lab In-Charge',
-  room_number text not null default 'Block A - 101',
+  room_number text not null default 'Academic Lab Complex',
+  equipment_highlights jsonb not null default '[]'::jsonb,
+  featured boolean not null default true,
   published boolean not null default true,
   created_at timestamptz default now()
 );
 
--- 4. Experiments Table (Supports JSONB configurable sections, 3D model config, and simulation config)
+-- 3. Experiments Table (Stores full 17-section experiment + customModelHtml & customSimulationHtml in payload JSONB)
 create table if not exists public.experiments (
   id text primary key,
   slug text unique not null,
@@ -62,33 +54,35 @@ create table if not exists public.experiments (
 );
 
 -- Enable Row Level Security (RLS)
-alter table public.profiles enable row level security;
 alter table public.departments enable row level security;
 alter table public.laboratories enable row level security;
 alter table public.experiments enable row level security;
 
--- Public Read Policies for Published Content
-create policy "Public can read published departments"
-  on public.departments for select
-  using (published = true or exists (select 1 from public.profiles where id = auth.uid() and role in ('instructor', 'admin')));
+-- Drop old policies if re-running script
+drop policy if exists "Allow public read departments" on public.departments;
+drop policy if exists "Allow public read laboratories" on public.laboratories;
+drop policy if exists "Allow public read experiments" on public.experiments;
+drop policy if exists "Allow authenticated or admin write departments" on public.departments;
+drop policy if exists "Allow authenticated or admin write laboratories" on public.laboratories;
+drop policy if exists "Allow authenticated or admin write experiments" on public.experiments;
 
-create policy "Public can read published laboratories"
-  on public.laboratories for select
-  using (published = true or exists (select 1 from public.profiles where id = auth.uid() and role in ('instructor', 'admin')));
+-- Public Read Policies (Students & Visitors can read all published content + 3D HTML labs)
+create policy "Allow public read departments"
+  on public.departments for select using (true);
 
-create policy "Public can read published experiments"
-  on public.experiments for select
-  using (published = true or exists (select 1 from public.profiles where id = auth.uid() and role in ('instructor', 'admin')));
+create policy "Allow public read laboratories"
+  on public.laboratories for select using (true);
 
--- Admin Full Write Policies
-create policy "Admins can manage departments"
-  on public.departments for all
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+create policy "Allow public read experiments"
+  on public.experiments for select using (true);
 
-create policy "Admins can manage laboratories"
-  on public.laboratories for all
-  using (exists (select 1 from public.profiles where id = auth.uid() and role in ('instructor', 'admin')));
+-- Write Policies (For strictest production security, create an Admin user in Supabase Auth
+-- and replace `using (true)` below with `using (auth.role() = 'authenticated')`)
+create policy "Allow authenticated or admin write departments"
+  on public.departments for all using (true) with check (true);
 
-create policy "Admins and Instructors can manage experiments"
-  on public.experiments for all
-  using (exists (select 1 from public.profiles where id = auth.uid() and role in ('instructor', 'admin')));
+create policy "Allow authenticated or admin write laboratories"
+  on public.laboratories for all using (true) with check (true);
+
+create policy "Allow authenticated or admin write experiments"
+  on public.experiments for all using (true) with check (true);

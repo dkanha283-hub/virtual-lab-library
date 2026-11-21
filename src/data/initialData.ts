@@ -307,8 +307,7 @@ By keeping armature voltage V_a at rated 220 V and inserting external resistance
 During Field Weakening (R_f_ext = 110 Ω):
 • Field Current I_f = 220 / (220 + 110) = 0.667 A
 • New Speed N = 1500 × (1.00 / 0.667) ≈ 2249 RPM`,
-    resultsTemplate: `1. In Armature Voltage Control, speed varied linearly from 650 RPM to 1500 RPM below base speed with constant flux.
-2. In Field Flux Control, speed increased inversely with field current from 1500 RPM to 2450 RPM above base speed.`,
+    resultsTemplate: '1. In Armature Voltage Control, speed varied linearly from 650 RPM to 1500 RPM below base speed with constant flux.\n2. In Field Flux Control, speed increased inversely with field current from 1500 RPM to 2450 RPM above base speed.',
     precautions: [
       'NEVER open the shunt field circuit while the motor is running—zero flux causes dangerously high runaway speed.',
       'Always keep the Field Rheostat at MINIMUM resistance (0 Ω) at the time of starting the motor.',

@@ -10,8 +10,12 @@ import {
   FlaskConical,
   BookOpen,
   Edit3,
+  Code2,
+  Upload,
+  Database,
 } from 'lucide-react'
 import { useLabStore } from '../context/LabStoreContext'
+import { AdminLoginCard } from '../components/auth/AdminLoginCard'
 import {
   Card,
   Badge,
@@ -22,8 +26,7 @@ import {
 
 export function AdminPage() {
   const {
-    role,
-    setRole,
+    isAdminAuthenticated,
     departments,
     laboratories,
     experiments,
@@ -31,8 +34,10 @@ export function AdminPage() {
     deleteDepartment,
     addLaboratory,
     deleteLaboratory,
+    updateExperiment,
     deleteExperiment,
     resetToFactoryDefaults,
+    cloudSyncMessage,
   } = useLabStore()
 
   const [statusBanner, setStatusBanner] = useState<string>('')
@@ -45,23 +50,52 @@ export function AdminPage() {
   const [labDeptId, setLabDeptId] = useState(departments[0]?.id || 'dept-ee')
   const [labSem, setLabSem] = useState(3)
   const [labRoom, setLabRoom] = useState('Academic Lab Complex - Room 202')
+  const [targetExpId, setTargetExpId] = useState(experiments[0]?.id || '')
+  const [quickHtmlTarget, setQuickHtmlTarget] = useState<'3d' | 'sim'>('3d')
+  const [quickHtmlCode, setQuickHtmlCode] = useState('')
 
-  if (role !== 'admin') {
+  const handleQuickHtmlAttach = (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetExp = experiments.find((ex) => ex.id === targetExpId)
+    if (!targetExp || !quickHtmlCode.trim()) return
+    if (quickHtmlTarget === '3d') {
+      updateExperiment({
+        ...targetExp,
+        has3dModel: true,
+        model3dSource: 'custom_html',
+        customModelHtml: quickHtmlCode.trim(),
+        updatedAt: new Date().toISOString().slice(0, 10),
+      })
+      setStatusBanner(`Uploaded HTML 3D Model to "${targetExp.title}" & synced to Supabase!`)
+    } else {
+      updateExperiment({
+        ...targetExp,
+        hasSimulation: true,
+        simulationSource: 'custom_html',
+        customSimulationHtml: quickHtmlCode.trim(),
+        updatedAt: new Date().toISOString().slice(0, 10),
+      })
+      setStatusBanner(`Uploaded HTML Virtual Lab to "${targetExp.title}" & synced to Supabase!`)
+    }
+    setQuickHtmlCode('')
+  }
+
+  const handleQuickHtmlFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setQuickHtmlCode(reader.result)
+    }
+    reader.readAsText(file)
+  }
+
+  if (!isAdminAuthenticated) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center mx-auto">
-          <ShieldCheck className="w-7 h-7" />
-        </div>
-        <h1 className="text-2xl font-extrabold text-slate-900">
-          Administrator Panel Access
-        </h1>
-        <p className="text-sm text-slate-600">
-          You are currently viewing the platform as <strong className="uppercase">{role}</strong>. Switch to the <strong>Admin</strong> role to manage departments, laboratories, and system settings.
-        </p>
-        <Button variant="primary" onClick={() => setRole('admin')}>
-          Switch to Administrator Role
-        </Button>
-      </div>
+      <AdminLoginCard
+        title="Admin Console Sign In"
+        subtitle="Enter your Administrator email and password to manage engineering departments, laboratories, and HTML virtual labs."
+      />
     )
   }
 
@@ -145,6 +179,81 @@ export function AdminPage() {
           <span>{statusBanner}</span>
         </div>
       )}
+
+      {/* Quick Upload 3D Model / Virtual Lab by HTML Code (Synced to Supabase) */}
+      <Card className="p-6 space-y-4 border-2 border-teal-600/30">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Code2 className="w-5 h-5 text-teal-700" />
+              Quick Upload 3D Model / Virtual Lab by HTML Code
+            </h2>
+            <p className="text-xs text-slate-500">
+              Attach a standalone HTML/Three.js 3D model or simulation directly to any existing experiment and sync to Supabase Cloud.
+            </p>
+          </div>
+          <Badge tone="teal">
+            <Database className="w-3 h-3" /> {cloudSyncMessage}
+          </Badge>
+        </div>
+
+        <form onSubmit={handleQuickHtmlAttach} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <FormField label="Select Target Experiment" required>
+                <select
+                  value={targetExpId}
+                  onChange={(e) => setTargetExpId(e.target.value)}
+                  className={inputClassName}
+                >
+                  {experiments.map((ex) => (
+                    <option key={ex.id} value={ex.id}>
+                      {ex.code} — {ex.title}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+            <FormField label="Target Slot" required>
+              <select
+                value={quickHtmlTarget}
+                onChange={(e) => setQuickHtmlTarget(e.target.value as '3d' | 'sim')}
+                className={inputClassName}
+              >
+                <option value="3d">Interactive 3D Model Viewer</option>
+                <option value="sim">Virtual Lab Simulation Viewer</option>
+              </select>
+            </FormField>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              Import .HTML File from iPad
+              <input
+                type="file"
+                accept=".html,.htm"
+                onChange={handleQuickHtmlFile}
+                className="hidden"
+              />
+            </label>
+            <span className="text-xs text-slate-500">or paste your full HTML code below:</span>
+          </div>
+
+          <textarea
+            rows={6}
+            required
+            value={quickHtmlCode}
+            onChange={(e) => setQuickHtmlCode(e.target.value)}
+            placeholder="<!DOCTYPE html><html>...paste your Three.js 3D model or Virtual Lab HTML code here...</html>"
+            className={`${inputClassName} font-mono text-xs`}
+          />
+
+          <Button type="submit" variant="primary" size="md">
+            <Upload className="w-4 h-4" /> Save &amp; Sync HTML Model to Supabase
+          </Button>
+        </form>
+      </Card>
 
       {/* Departments & Laboratories Management Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

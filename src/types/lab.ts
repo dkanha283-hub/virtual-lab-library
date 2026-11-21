@@ -99,10 +99,14 @@ export interface Experiment {
   circuitDiagramSvgType: 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
   circuitDiagramDescription: string
   has3dModel: boolean
+  model3dSource?: 'preset' | 'custom_html'
   model3dPreset: ModelPresetId
   customGlbUrl?: string
+  customModelHtml?: string
   hasSimulation: boolean
+  simulationSource?: 'preset' | 'custom_html'
   simulationPreset: SimulationPresetId
+  customSimulationHtml?: string
   procedure: string[]
   sampleCalculations: string
   resultsTemplate: string

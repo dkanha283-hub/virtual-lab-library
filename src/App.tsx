@@ -14,12 +14,14 @@ import { DepartmentPage } from './pages/DepartmentPage'
 import { LaboratoryPage } from './pages/LaboratoryPage'
 import { ExperimentPage } from './pages/ExperimentPage'
 import { AdminPage } from './pages/AdminPage'
+import { AdminLoginPage } from './pages/AdminLoginPage'
 
 export default function App() {
   return (
     <AppShell>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<AdminLoginPage />} />
         <Route path="/departments" element={<AllDepartmentsPage />} />
         <Route path="/laboratories" element={<AllLaboratoriesPage />} />
         <Route path="/experiments" element={<AllExperimentsPage />} />
