@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -39,6 +40,22 @@ export function AdminPage() {
     resetToFactoryDefaults,
     cloudSyncMessage,
   } = useLabStore()
+
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean
+    title: string
+    message: string
+    confirmLabel: string
+    variant: 'danger' | 'primary'
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    variant: 'primary',
+    onConfirm: () => {},
+  })
 
   const [statusBanner, setStatusBanner] = useState<string>('')
   const [deptName, setDeptName] = useState('')
@@ -102,7 +119,17 @@ export function AdminPage() {
   const handleCreateDept = (e: React.FormEvent) => {
     e.preventDefault()
     if (!deptName.trim() || !deptCode.trim()) return
-    addDepartment({
+    const nameSnapshot = deptName.trim()
+    const codeSnapshot = deptCode.toUpperCase()
+    const descSnapshot = deptDesc.trim() || 'Accredited engineering department.'
+    setConfirmState({
+      open: true,
+      title: 'Publish New Branch / Department?',
+      message: `Create and publish "${nameSnapshot}" (${codeSnapshot}) to the Virtual Lab Library?`,
+      confirmLabel: 'Publish Branch',
+      variant: 'primary',
+      onConfirm: () => {
+        addDepartment({
       id: `dept-${Date.now()}`,
       slug: deptName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       code: deptCode.toUpperCase(),
@@ -116,13 +143,28 @@ export function AdminPage() {
     setDeptName('')
     setDeptCode('')
     setDeptDesc('')
-    setStatusBanner(`Added department "${deptName}"!`)
+    setStatusBanner(`Added department "${nameSnapshot}"!`)
+    setConfirmState((s) => ({ ...s, open: false }))
+      },
+    })
   }
 
   const handleCreateLab = (e: React.FormEvent) => {
     e.preventDefault()
     if (!labName.trim() || !labCode.trim()) return
-    addLaboratory({
+    const nameSnapshot = labName.trim()
+    const codeSnapshot = labCode.toUpperCase()
+    const deptSnapshot = labDeptId
+    const semSnapshot = labSem
+    const roomSnapshot = labRoom
+    setConfirmState({
+      open: true,
+      title: 'Publish New Laboratory?',
+      message: `Create and publish "${nameSnapshot}" (${codeSnapshot}) to the Virtual Lab Library?`,
+      confirmLabel: 'Publish Lab',
+      variant: 'primary',
+      onConfirm: () => {
+        addLaboratory({
       id: `lab-${Date.now()}`,
       slug: labName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       code: labCode.toUpperCase(),
@@ -138,7 +180,10 @@ export function AdminPage() {
     })
     setLabName('')
     setLabCode('')
-    setStatusBanner(`Added laboratory "${labName}"!`)
+    setStatusBanner(`Added laboratory "${nameSnapshot}"!`)
+    setConfirmState((s) => ({ ...s, open: false }))
+      },
+    })
   }
 
   return (
@@ -314,7 +359,19 @@ export function AdminPage() {
                   <Badge mono tone="slate">{d.code}</Badge>
                 </div>
                 <button
-                  onClick={() => deleteDepartment(d.id)}
+                  onClick={() =>
+                    setConfirmState({
+                      open: true,
+                      title: 'Delete Branch / Department?',
+                      message: `Are you sure you want to delete "${d.name}" (${d.code})? Tap Sync afterwards to update the public site across all devices.`,
+                      confirmLabel: 'Delete Branch',
+                      variant: 'danger',
+                      onConfirm: () => {
+                        deleteDepartment(d.id)
+                        setConfirmState((s) => ({ ...s, open: false }))
+                      },
+                    })
+                  }
                   className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
                   title="Delete Department"
                 >
@@ -407,7 +464,19 @@ export function AdminPage() {
                   <Badge mono tone="teal">{l.code}</Badge>
                 </div>
                 <button
-                  onClick={() => deleteLaboratory(l.id)}
+                  onClick={() =>
+                    setConfirmState({
+                      open: true,
+                      title: 'Delete Laboratory?',
+                      message: `Are you sure you want to delete "${l.name}" (${l.code})? Tap Sync afterwards to update the public site across all devices.`,
+                      confirmLabel: 'Delete Lab',
+                      variant: 'danger',
+                      onConfirm: () => {
+                        deleteLaboratory(l.id)
+                        setConfirmState((s) => ({ ...s, open: false }))
+                      },
+                    })
+                  }
                   className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
                   title="Delete Laboratory"
                 >
@@ -457,7 +526,19 @@ export function AdminPage() {
                   </Button>
                 </Link>
                 <button
-                  onClick={() => deleteExperiment(exp.id)}
+                  onClick={() =>
+                    setConfirmState({
+                      open: true,
+                      title: 'Delete Experiment?',
+                      message: `Are you sure you want to permanently delete "${exp.title}"?`,
+                      confirmLabel: 'Delete Experiment',
+                      variant: 'danger',
+                      onConfirm: () => {
+                        deleteExperiment(exp.id)
+                        setConfirmState((s) => ({ ...s, open: false }))
+                      },
+                    })
+                  }
                   className="p-2 rounded-xl bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -467,6 +548,15 @@ export function AdminPage() {
           ))}
         </div>
       </Card>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState((s) => ({ ...s, open: false }))}
+      />
     </div>
   )
 }

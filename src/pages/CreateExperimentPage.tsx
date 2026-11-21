@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import React, { useState, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { z } from 'zod'
@@ -145,6 +146,7 @@ export function CreateExperimentPage() {
   >(existingExp?.circuitDiagramSvgType || 'dc-shunt')
   const [circuitDiagramImageUrl, setCircuitDiagramImageUrl] = useState<string>(existingExp?.circuitDiagramImageUrl || '')
   const [uploadingDiagram, setUploadingDiagram] = useState(false)
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
 
   const handleCircuitImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -1660,7 +1662,7 @@ export function CreateExperimentPage() {
                 <Button variant="outline" onClick={() => handleSave('draft')}>
                   <Save className="w-4 h-4" /> Save as Draft
                 </Button>
-                <Button variant="primary" onClick={() => handleSave('published')}>
+                <Button variant="primary" onClick={() => setPublishConfirmOpen(true)}>
                   <Send className="w-4 h-4" /> Publish Experiment Now
                 </Button>
               </div>
@@ -1734,7 +1736,7 @@ export function CreateExperimentPage() {
                 <Button variant="outline" onClick={() => handleSave('draft')}>
                   <Save className="w-4 h-4" /> Save as Draft
                 </Button>
-                <Button variant="primary" size="lg" onClick={() => handleSave('published')}>
+                <Button variant="primary" size="lg" onClick={() => setPublishConfirmOpen(true)}>
                   <Send className="w-4 h-4" /> Confirm &amp; Publish to Library
                 </Button>
               </div>
@@ -1742,6 +1744,18 @@ export function CreateExperimentPage() {
           </Card>
         </div>
       )}
+      <ConfirmDialog
+        open={publishConfirmOpen}
+        title="Publish Experiment to Library?"
+        message={`Are you ready to publish "${title || 'this experiment'}" so students and visitors can view it across all devices?`}
+        confirmLabel="Confirm & Publish"
+        variant="primary"
+        onConfirm={() => {
+          setPublishConfirmOpen(false)
+          handleSave('published')
+        }}
+        onCancel={() => setPublishConfirmOpen(false)}
+      />
     </div>
   )
 }
