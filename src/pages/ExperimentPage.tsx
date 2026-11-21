@@ -359,6 +359,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
       {/* SECTION GROUP 2: CIRCUIT SCHEMATIC & INTERACTIVE 3D MODEL */}
       {show3dSchematic && (
         <div className="space-y-6">
+          {(exp.circuitDiagramImageUrl || exp.circuitDiagramSvgType !== 'none') && (
           <Card className="p-6 space-y-4">
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
@@ -408,6 +409,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
             </div>
             )}
           </Card>
+          )}
 
           {exp.has3dModel && (
             <div className="space-y-3">

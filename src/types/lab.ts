@@ -96,7 +96,7 @@ export interface Experiment {
   apparatus: ApparatusItem[]
   theory: string
   equations: EquationItem[]
-  circuitDiagramSvgType: 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
+  circuitDiagramSvgType: 'none' | 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
   circuitDiagramDescription: string
   circuitDiagramImageUrl?: string
   has3dModel: boolean

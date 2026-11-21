@@ -141,7 +141,7 @@ export function CreateExperimentPage() {
     ]
   )
   const [circuitDiagramSvgType, setCircuitDiagramSvgType] = useState<
-    'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
+    'none' | 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
   >(existingExp?.circuitDiagramSvgType || 'dc-shunt')
   const [circuitDiagramImageUrl, setCircuitDiagramImageUrl] = useState<string>(existingExp?.circuitDiagramImageUrl || '')
   const [uploadingDiagram, setUploadingDiagram] = useState(false)
@@ -959,6 +959,7 @@ export function CreateExperimentPage() {
                 onChange={(e) => setCircuitDiagramSvgType(e.target.value as any)}
                 className={inputClassName}
               >
+                <option value="none">None (Off — Hide Built-in Schematic)</option>
                 <option value="dc-shunt">DC Shunt Motor &amp; 3-Point Starter Schematic</option>
                 <option value="series-rlc">Series R-L-C &amp; Dual-Channel CRO Schematic</option>
                 <option value="thevenin">Linear Bilateral Network / Thevenin Bridge</option>
