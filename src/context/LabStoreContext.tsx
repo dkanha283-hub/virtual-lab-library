@@ -134,11 +134,22 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     const fetchCloudData = async () => {
       setCloudSyncStatus('syncing')
       try {
-        const [deptRes, labRes, expRes] = await Promise.all([
+        const [deptRes, labRes, expRes, delRes] = await Promise.all([
           supabase!.from('departments').select('*'),
           supabase!.from('laboratories').select('*'),
           supabase!.from('experiments').select('*'),
+          supabase!.from('deleted_items').select('id'),
         ])
+
+        const localDeleted: string[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELETED_IDS) || "[]")
+        const cloudDeleted: string[] = Array.isArray(delRes?.data) ? delRes.data.map((r: any) => r.id) : []
+        const mergedDeleted = Array.from(new Set([...localDeleted, ...cloudDeleted]))
+        localStorage.setItem(STORAGE_KEYS.DELETED_IDS, JSON.stringify(mergedDeleted))
+        setDeletedIds(mergedDeleted)
+        const delSet = new Set(mergedDeleted)
+        setDepartments((prev) => prev.filter((d) => !delSet.has(d.id)))
+        setLaboratories((prev) => prev.filter((l) => !delSet.has(l.id)))
+        setExperiments((prev) => prev.filter((e) => !delSet.has(e.id)))
 
         if (deptRes.error || labRes.error || expRes.error) {
           setCloudSyncStatus('offline')
@@ -359,6 +370,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
               supabase.from('experiments').delete().in('id', currentDeleted),
               supabase.from('laboratories').delete().in('id', currentDeleted),
               supabase.from('departments').delete().in('id', currentDeleted),
+              supabase.from('deleted_items').upsert(currentDeleted.map((id) => ({ id }))),
             ]
           : []),
       ])
@@ -398,7 +410,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
   const deleteDepartment = (id: string) => {
     setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setDepartments((prev) => prev.filter((d) => d.id !== id))
-    if (supabase) supabase!.from('departments').delete().eq('id', id)
+    if (supabase) { supabase!.from('departments').delete().eq('id', id); supabase!.from('deleted_items').upsert({ id }) }
   }
 
   const addLaboratory = (lab: Laboratory) => {
@@ -412,7 +424,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
   const deleteLaboratory = (id: string) => {
     setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setLaboratories((prev) => prev.filter((l) => l.id !== id))
-    if (supabase) supabase!.from('laboratories').delete().eq('id', id)
+    if (supabase) { supabase!.from('laboratories').delete().eq('id', id); supabase!.from('deleted_items').upsert({ id }) }
   }
 
   const addExperiment = (exp: Experiment) => {
@@ -426,7 +438,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
   const deleteExperiment = (id: string) => {
     setDeletedIds((prev) => Array.from(new Set([...prev, id])))
     setExperiments((prev) => prev.filter((e) => e.id !== id))
-    if (supabase) supabase!.from('experiments').delete().eq('id', id)
+    if (supabase) { supabase!.from('experiments').delete().eq('id', id); supabase!.from('deleted_items').upsert({ id }) }
   }
 
   const resetToFactoryDefaults = () => {
