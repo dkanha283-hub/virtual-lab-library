@@ -241,6 +241,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     if (cleanEmail === CONFIGURED_ADMIN_EMAIL && cleanPass === CONFIGURED_ADMIN_PASSWORD) {
       setAdminSessionEmail(cleanEmail)
       sessionStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, cleanEmail)
+      experiments.forEach((exp) => { syncExperimentToCloud(exp) })
       return { ok: true }
     }
 
@@ -322,6 +323,10 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     if (!error) {
       setCloudSyncStatus('synced')
       setCloudSyncMessage('Experiment & HTML 3D Lab saved to Supabase Cloud')
+    } else {
+      console.error("Supabase experiment sync error:", error)
+      setCloudSyncStatus('offline')
+      setCloudSyncMessage(`Sync Error: ${error.message}`)
     }
   }
 
