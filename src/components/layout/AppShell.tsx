@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu,
@@ -21,6 +21,8 @@ import {
   PanelLeftOpen,
   RefreshCw,
   GraduationCap,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { useLabStore } from '../../context/LabStoreContext'
 import { cn } from '../../lib/utils'
@@ -46,6 +48,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vll_theme') === 'dark'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+    try {
+      localStorage.setItem('vll_theme', darkMode ? 'dark' : 'light')
+    } catch {}
+  }, [darkMode])
 
   const recentLabs = recentLabIds
     .map((id) => laboratories.find((l) => l.id === id))
@@ -335,7 +351,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span>Admin Login</span>
             </Link>
           )}
-        </div>
+        
+            <button
+              type="button"
+              onClick={() => setDarkMode((d) => !d)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              <span className="hidden sm:inline">{darkMode ? 'Light' : 'Dark'}</span>
+            </button>
+          </div>
       </header>
 
       <div className="flex-1 flex">
