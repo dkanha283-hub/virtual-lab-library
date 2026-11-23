@@ -41,10 +41,8 @@ import {
   FormField,
   inputClassName,
 } from '../components/ui/DesignSystem'
-import { Engineering3DViewer } from '../components/viewer3d/Engineering3DViewer'
 import { SandboxedHtmlLabViewer } from '../components/viewer3d/SandboxedHtmlLabViewer'
 import { AdminLoginCard } from '../components/auth/AdminLoginCard'
-import { VirtualLabSimulator } from '../components/simulation/VirtualLabSimulator'
 import { cn } from '../lib/utils'
 
 const Step1Schema = z.object({
@@ -183,7 +181,7 @@ export function CreateExperimentPage() {
   )
   const [circuitDiagramSvgType, setCircuitDiagramSvgType] = useState<
     'none' | 'dc-shunt' | 'series-rlc' | 'thevenin' | 'pump-loop' | 'digital-logic'
-  >(existingExp?.circuitDiagramSvgType || 'dc-shunt')
+  >(existingExp?.circuitDiagramSvgType || 'none')
   const [circuitDiagramImageUrl, setCircuitDiagramImageUrl] = useState<string>(existingExp?.circuitDiagramImageUrl || '')
   const [uploadingDiagram, setUploadingDiagram] = useState(false)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
@@ -266,7 +264,7 @@ export function CreateExperimentPage() {
   // Step 3 State: 3D Model & Simulation (Wireframe Panel 3 Checkboxes + Safe Config + HTML Import + Live Preview)
   const [has3dModel, setHas3dModel] = useState<boolean>(existingExp?.has3dModel ?? true)
   const [model3dSource, setModel3dSource] = useState<'preset' | 'custom_html'>(
-    existingExp?.model3dSource || 'preset'
+    'custom_html'
   )
   const [model3dPreset, setModel3dPreset] = useState<ModelPresetId>(
     existingExp?.model3dPreset || 'dc-shunt-motor'
@@ -275,7 +273,7 @@ export function CreateExperimentPage() {
   const [customModelHtml, setCustomModelHtml] = useState<string>(existingExp?.customModelHtml || '')
   const [hasSimulation, setHasSimulation] = useState<boolean>(existingExp?.hasSimulation ?? true)
   const [simulationSource, setSimulationSource] = useState<'preset' | 'custom_html'>(
-    existingExp?.simulationSource || 'preset'
+    'custom_html'
   )
   const [simulationPreset, setSimulationPreset] = useState<SimulationPresetId>(
     existingExp?.simulationPreset || 'dc-motor-speed-control'
@@ -1038,20 +1036,7 @@ export function CreateExperimentPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormField label="Circuit / Workbench Schematic Type">
-              <select
-                value={circuitDiagramSvgType}
-                onChange={(e) => setCircuitDiagramSvgType(e.target.value as any)}
-                className={inputClassName}
-              >
-                <option value="none">None (Off — Hide Built-in Schematic)</option>
-                <option value="dc-shunt">DC Shunt Motor &amp; 3-Point Starter Schematic</option>
-                <option value="series-rlc">Series R-L-C &amp; Dual-Channel CRO Schematic</option>
-                <option value="thevenin">Linear Bilateral Network / Thevenin Bridge</option>
-                <option value="pump-loop">Closed-Loop Centrifugal Pump Hydraulic Rig</option>
-                <option value="digital-logic">TTL 74xx Digital IC Logic Trainer</option>
-              </select>
-            </FormField>
+            
 
             <FormField label="Schematic Diagram Caption / Description">
               <input
@@ -1331,7 +1316,7 @@ export function CreateExperimentPage() {
                     <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200">
                       <button
                         type="button"
-                        onClick={() => setModel3dSource('preset')}
+                        onClick={() => setModel3dSource('custom_html')} style={{ display: 'none' }}
                         className={cn(
                           'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
                           model3dSource === 'preset' ? 'bg-teal-700 text-white' : 'text-slate-600'
@@ -1414,7 +1399,7 @@ export function CreateExperimentPage() {
                     <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200">
                       <button
                         type="button"
-                        onClick={() => setSimulationSource('preset')}
+                        onClick={() => setSimulationSource('custom_html')} style={{ display: 'none' }}
                         className={cn(
                           'px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer',
                           simulationSource === 'preset' ? 'bg-teal-700 text-white' : 'text-slate-600'
@@ -1529,10 +1514,7 @@ export function CreateExperimentPage() {
                       kind="3D Model"
                     />
                   ) : (
-                    <Engineering3DViewer
-                      preset={model3dPreset}
-                      title={title || 'Live 3D Model Preview'}
-                    />
+                    <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">Upload or paste a custom HTML 3D model above to preview it here.</div>
                   )
                 ) : (
                   <div className="py-16 text-center text-xs text-slate-500">
@@ -1547,7 +1529,7 @@ export function CreateExperimentPage() {
                     kind="Virtual Lab Simulation"
                   />
                 ) : (
-                  <VirtualLabSimulator preset={simulationPreset} />
+                  <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">Upload or paste a custom HTML simulator above to preview it here.</div>
                 )
               ) : (
                 <div className="py-16 text-center text-xs text-slate-500">
@@ -1793,7 +1775,7 @@ export function CreateExperimentPage() {
                 {model3dSource === 'custom_html' && customModelHtml ? (
                   <SandboxedHtmlLabViewer htmlCode={customModelHtml} title={title || 'Preview'} kind="3D Model" />
                 ) : (
-                  <Engineering3DViewer preset={model3dPreset} title={title || 'Preview'} />
+                  <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">Upload or paste a custom HTML 3D model above to preview it here.</div>
                 )}
               </div>
             )}
@@ -1806,7 +1788,7 @@ export function CreateExperimentPage() {
                 {simulationSource === 'custom_html' && customSimulationHtml ? (
                   <SandboxedHtmlLabViewer htmlCode={customSimulationHtml} title={title || 'Preview'} kind="Virtual Lab Simulation" />
                 ) : (
-                  <VirtualLabSimulator preset={simulationPreset} />
+                  <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">Upload or paste a custom HTML simulator above to preview it here.</div>
                 )}
               </div>
             )}

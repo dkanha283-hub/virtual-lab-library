@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Plus,
   Trash2,
-  RotateCcw,
   CheckCircle2,
   Building2,
   FlaskConical,
@@ -39,7 +38,6 @@ export function AdminPage() {
     updateLaboratory,
     updateExperiment,
     deleteExperiment,
-    resetToFactoryDefaults,
     cloudSyncMessage,
   } = useLabStore()
 
@@ -210,16 +208,7 @@ export function AdminPage() {
               <Plus className="w-4 h-4" /> Create Experiment
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              resetToFactoryDefaults()
-              setStatusBanner('Restored factory default departments, laboratories, and experiments.')
-            }}
-          >
-            <RotateCcw className="w-4 h-4" /> Reset Defaults
-          </Button>
+
         </div>
       </Card>
 

@@ -20,9 +20,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { useLabStore } from '../context/LabStoreContext'
-import { Engineering3DViewer } from '../components/viewer3d/Engineering3DViewer'
 import { SandboxedHtmlLabViewer } from '../components/viewer3d/SandboxedHtmlLabViewer'
-import { VirtualLabSimulator } from '../components/simulation/VirtualLabSimulator'
 import { Card, Badge, Button } from '../components/ui/DesignSystem'
 import { cn } from '../lib/utils'
 
@@ -404,55 +402,21 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
       {/* SECTION GROUP 2: CIRCUIT SCHEMATIC & INTERACTIVE 3D MODEL */}
       {show3dSchematic && (
         <div className="space-y-6">
-          {(exp.circuitDiagramImageUrl || exp.circuitDiagramSvgType !== 'none') && (
+          {exp.circuitDiagramImageUrl && (
           <Card className="p-6 space-y-4">
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                Interactive Circuit / Workbench Schematic Diagram
+                Circuit / Workbench Schematic Diagram
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">{exp.circuitDiagramDescription}</p>
             </div>
-
-            {exp.circuitDiagramImageUrl ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center">
-                <img
-                  src={exp.circuitDiagramImageUrl}
-                  alt={exp.title + " Circuit Diagram"}
-                  className="w-full max-w-3xl max-h-[460px] object-contain rounded-xl"
-                />
-              </div>
-            ) : (
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center">
-              <svg viewBox="0 0 680 210" className="w-full max-w-3xl h-auto">
-                <rect x="10" y="10" width="660" height="190" rx="14" fill="#090d16" stroke="#1e293b" strokeWidth="2" />
-                <line x1="50" y1="45" x2="580" y2="45" stroke="#38bdf8" strokeWidth="2.5" />
-                <line x1="50" y1="165" x2="580" y2="165" stroke="#64748b" strokeWidth="2.5" />
-                <circle cx="50" cy="45" r="5" fill="#38bdf8" />
-                <circle cx="50" cy="165" r="5" fill="#64748b" />
-                <text x="35" y="110" fill="#e2e8f0" fontSize="12" fontWeight="bold">
-                  {exp.circuitDiagramSvgType === 'series-rlc' ? 'V_s ∠0° (AC)' : '220V DC'}
-                </text>
-                <rect x="150" y="33" width="95" height="24" rx="4" fill="#0f172a" stroke="#f59e0b" strokeWidth="2" />
-                <text x="165" y="49" fill="#fcd34d" fontSize="11" fontWeight="bold">
-                  {exp.circuitDiagramSvgType === 'series-rlc' ? 'Resistor R' : 'Rheostat R_ext'}
-                </text>
-                <rect x="300" y="33" width="110" height="24" rx="4" fill="#0f172a" stroke="#10b981" strokeWidth="2" />
-                <text x="315" y="49" fill="#6ee7b7" fontSize="11" fontWeight="bold">
-                  {exp.circuitDiagramSvgType === 'series-rlc' ? 'Inductor L (mH)' : 'Field R_f (Z-ZZ)'}
-                </text>
-                <line x1="500" y1="45" x2="500" y2="75" stroke="#38bdf8" strokeWidth="2.5" />
-                <circle cx="500" cy="105" r="30" fill="#1e293b" stroke="#38bdf8" strokeWidth="2.5" />
-                <text x="488" y="110" fill="#ffffff" fontSize="14" fontWeight="bold">
-                  {exp.circuitDiagramSvgType === 'series-rlc' ? 'C' : 'M'}
-                </text>
-                <line x1="500" y1="135" x2="500" y2="165" stroke="#64748b" strokeWidth="2.5" />
-                <line x1="580" y1="45" x2="580" y2="85" stroke="#a855f7" strokeWidth="2" />
-                <circle cx="580" cy="105" r="18" fill="#0f172a" stroke="#a855f7" strokeWidth="2" />
-                <text x="575" y="110" fill="#d8b4fe" fontSize="12" fontWeight="bold">V</text>
-                <line x1="580" y1="125" x2="580" y2="165" stroke="#a855f7" strokeWidth="2" />
-              </svg>
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center">
+              <img
+                src={exp.circuitDiagramImageUrl}
+                alt={exp.title + " Circuit Diagram"}
+                className="w-full max-w-3xl max-h-[460px] object-contain rounded-xl"
+              />
             </div>
-            )}
           </Card>
           )}
 
@@ -473,11 +437,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   kind="3D Model"
                 />
               ) : (
-                <Engineering3DViewer
-                  preset={exp.model3dPreset}
-                  title={exp.title}
-                  rpm={liveRpm}
-                />
+                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">No custom HTML 3D model uploaded for this experiment.</div>
               )}
             </div>
           )}
@@ -499,10 +459,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   kind="Virtual Lab Simulation"
                 />
               ) : (
-                <VirtualLabSimulator
-                  preset={exp.simulationPreset}
-                  onRpmChange={(newRpm) => setLiveRpm(newRpm)}
-                />
+                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">No custom HTML simulator uploaded for this experiment.</div>
               )}
             </div>
           )}
