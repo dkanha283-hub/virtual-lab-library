@@ -1,3 +1,4 @@
+import { parseAiExperimentInfo } from '../lib/aiExperimentParser'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import React, { useState, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
@@ -86,6 +87,41 @@ export function CreateExperimentPage() {
   const [step, setStep] = useState<number>(1)
   const [validationError, setValidationError] = useState<string>('')
   const [notice, setNotice] = useState<string>('')
+  const [aiRawText, setAiRawText] = useState<string>('')
+  const [aiAutoFillMsg, setAiAutoFillMsg] = useState<string>('')
+
+  const handleAiAutoFill = () => {
+    const parsed = parseAiExperimentInfo(aiRawText, departments, laboratories)
+    if (parsed.filledCount === 0) {
+      setAiAutoFillMsg('Could not detect Step 1 / Step 2 fields. Please paste the structured manual text.')
+      return
+    }
+    if (parsed.departmentId) setDepartmentId(parsed.departmentId)
+    if (parsed.labId) setLabId(parsed.labId)
+    if (parsed.customLabName) setCustomLabName(parsed.customLabName)
+    if (parsed.experimentNumber) setExperimentNumber(parsed.experimentNumber)
+    if (parsed.code) setCode(parsed.code)
+    if (parsed.title) setTitle(parsed.title)
+    if (parsed.summary) setSummary(parsed.summary)
+    if (parsed.difficulty) setDifficulty(parsed.difficulty)
+    if (parsed.semester) setSemester(parsed.semester)
+    if (parsed.estimatedMinutes) setEstimatedMinutes(parsed.estimatedMinutes)
+    if (parsed.objectivesText) setObjectivesText(parsed.objectivesText)
+    if (parsed.aim) setAim(parsed.aim)
+    if (parsed.learningOutcomesText) setLearningOutcomesText(parsed.learningOutcomesText)
+    if (parsed.apparatus && parsed.apparatus.length > 0) setApparatus(parsed.apparatus)
+    if (parsed.theory) setTheory(parsed.theory)
+    if (parsed.equations && parsed.equations.length > 0) setEquations(parsed.equations)
+    if (parsed.circuitDiagramSvgType) setCircuitDiagramSvgType(parsed.circuitDiagramSvgType)
+    if (parsed.circuitDiagramDescription) setCircuitDiagramDescription(parsed.circuitDiagramDescription)
+    if (parsed.procedureText) setProcedureText(parsed.procedureText)
+    if (parsed.sampleCalculations) setSampleCalculations(parsed.sampleCalculations)
+    if (parsed.resultsTemplate) setResultsTemplate(parsed.resultsTemplate)
+    if (parsed.precautionsText) setPrecautionsText(parsed.precautionsText)
+    if (parsed.vivaQuestions && parsed.vivaQuestions.length > 0) setVivaQuestions(parsed.vivaQuestions)
+    if (parsed.referencesText) setReferencesText(parsed.referencesText)
+    setAiAutoFillMsg(`Auto-filled ${parsed.filledCount} sections across Step 1 & Step 2! Review and proceed to Step 3.`)
+  }
 
   // Step 1 State
   const [departmentId, setDepartmentId] = useState<string>(
@@ -611,6 +647,49 @@ export function CreateExperimentPage() {
       )}
 
       {/* STEP 1: BASIC INFORMATION (Matches Wireframe Top Fields: Lab Name, Experiment Number, Experiment Name) */}
+      {/* Built-in AI Info Conversion Box (Auto-Fills Step 1 & Step 2) */}
+      {step === 1 && (
+        <Card className="p-5 sm:p-6 space-y-3 border-2 border-teal-600/30 bg-teal-50/30">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="inline-flex items-center gap-2">
+                <Badge tone="teal">AI Info Auto-Fill</Badge>
+                <span className="text-sm font-extrabold text-slate-900">
+                  Instant Step 1 &amp; Step 2 Converter
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Paste your formatted STEP 1 &amp; STEP 2 experiment text below to automatically fill Title, Objectives, Apparatus Table, Theory, Equations, Procedure, Calculations, Precautions, Viva Q&amp;A, and References.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {aiRawText && (
+                <Button variant="outline" size="sm" onClick={() => { setAiRawText(''); setAiAutoFillMsg('') }}>
+                  Clear
+                </Button>
+              )}
+              <Button variant="primary" size="sm" onClick={handleAiAutoFill}>
+                Auto-Fill Step 1 &amp; 2
+              </Button>
+            </div>
+          </div>
+
+          <textarea
+            rows={5}
+            value={aiRawText}
+            onChange={(e) => setAiRawText(e.target.value)}
+            placeholder="Paste STEP 1 — BASIC EXPERIMENT INFORMATION and STEP 2 — STRUCTURED LEARNING CONTENT EDITOR here..."
+            className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-600"
+          />
+
+          {aiAutoFillMsg && (
+            <div className="p-2.5 rounded-xl bg-teal-100/70 border border-teal-300 text-xs font-bold text-teal-900">
+              {aiAutoFillMsg}
+            </div>
+          )}
+        </Card>
+      )}
+
       {step === 1 && (
         <Card className="p-6 sm:p-8 space-y-6 border-2 border-teal-600/20">
           <div className="border-b border-slate-200 pb-4">
