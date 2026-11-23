@@ -36,6 +36,7 @@ export function AdminPage() {
     deleteDepartment,
     addLaboratory,
     deleteLaboratory,
+    updateLaboratory,
     updateExperiment,
     deleteExperiment,
     resetToFactoryDefaults,
@@ -59,6 +60,9 @@ export function AdminPage() {
   })
 
   const [statusBanner, setStatusBanner] = useState<string>('')
+  const [editingLabId, setEditingLabId] = useState<string | null>(null)
+  const [editLabIncharge, setEditLabIncharge] = useState<string>('')
+  const [editLabRoom, setEditLabRoom] = useState<string>('')
   const [deptName, setDeptName] = useState('')
   const [deptCode, setDeptCode] = useState('')
   const [deptDesc, setDeptDesc] = useState('')
@@ -462,29 +466,106 @@ export function AdminPage() {
                 key={l.id}
                 className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
               >
-                <div>
-                  <span className="text-xs font-bold text-slate-900">{l.name}</span>{' '}
-                  <Badge mono tone="teal">{l.code}</Badge>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-slate-900">{l.name}</span>{' '}
+                      <Badge mono tone="teal">{l.code}</Badge>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        In-Charge: <strong className="text-slate-700">{l.incharge}</strong> • Room: <strong className="text-slate-700">{l.roomNumber}</strong>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingLabId === l.id) {
+                            setEditingLabId(null)
+                          } else {
+                            setEditingLabId(l.id)
+                            setEditLabIncharge(l.incharge)
+                            setEditLabRoom(l.roomNumber)
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 cursor-pointer"
+                      >
+                        {editingLabId === l.id ? 'Close' : 'Edit'}
+                      </button>
+                      <button
+                        onClick={() =>
+                          setConfirmState({
+                            open: true,
+                            title: 'Delete Laboratory?',
+                            message: `Are you sure you want to delete "${l.name}" (${l.code})? Tap Sync afterwards to update the public site across all devices.`,
+                            confirmLabel: 'Delete Lab',
+                            variant: 'danger',
+                            onConfirm: () => {
+                              deleteLaboratory(l.id)
+                              setConfirmState((s) => ({ ...s, open: false }))
+                            },
+                          })
+                        }
+                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                        title="Delete Laboratory"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {editingLabId === l.id && (
+                    <div className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                          Teacher / Faculty In-Charge
+                        </label>
+                        <input
+                          type="text"
+                          value={editLabIncharge}
+                          onChange={(e) => setEditLabIncharge(e.target.value)}
+                          placeholder="e.g. Prof. A. K. Mohanty"
+                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                          Room Number / Location
+                        </label>
+                        <input
+                          type="text"
+                          value={editLabRoom}
+                          onChange={(e) => setEditLabRoom(e.target.value)}
+                          placeholder="e.g. EE Main Building - Room 204"
+                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900"
+                        />
+                      </div>
+                      <div className="sm:col-span-2 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingLabId(null)}
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateLaboratory({
+                              ...l,
+                              incharge: editLabIncharge.trim() || 'Faculty Lab In-Charge',
+                              roomNumber: editLabRoom.trim() || 'Academic Lab Complex',
+                            })
+                            setEditingLabId(null)
+                            setStatusBanner(`Updated "${l.name}" (In-Charge & Room No). Tap Sync to push across devices.`)
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() =>
-                    setConfirmState({
-                      open: true,
-                      title: 'Delete Laboratory?',
-                      message: `Are you sure you want to delete "${l.name}" (${l.code})? Tap Sync afterwards to update the public site across all devices.`,
-                      confirmLabel: 'Delete Lab',
-                      variant: 'danger',
-                      onConfirm: () => {
-                        deleteLaboratory(l.id)
-                        setConfirmState((s) => ({ ...s, open: false }))
-                      },
-                    })
-                  }
-                  className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
-                  title="Delete Laboratory"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             ))}
           </div>
