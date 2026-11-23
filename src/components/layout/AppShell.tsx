@@ -20,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
+  GraduationCap,
 } from 'lucide-react'
 import { useLabStore } from '../../context/LabStoreContext'
 import { cn } from '../../lib/utils'
@@ -73,7 +74,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           { to: '/contributions', label: 'My Contributions', icon: FileEdit },
           { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
         ]
-      : [{ to: '/login', label: 'Admin Login', icon: Lock }]),
+      : [
+          { to: '/student-login', label: 'Student Login', icon: GraduationCap },
+          { to: '/login', label: 'Admin Login', icon: Lock },
+        ]),
   ]
 
   const renderSidebarContent = (onItemClick?: () => void) => (

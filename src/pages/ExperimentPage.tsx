@@ -1,3 +1,4 @@
+import { getSavedStudentSession, isStudentAccessActive, refreshStudentSession, StudentAccount } from '../lib/studentAuth'
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -29,6 +30,12 @@ type LearningTab = 'all' | 'theory' | '3d_schematic' | 'simulation' | 'viva_down
 
 export function ExperimentPage() {
   const { expSlug } = useParams()
+  const [studentSession, setStudentSession] = useState<StudentAccount | null>(() => getSavedStudentSession())
+  useEffect(() => {
+    refreshStudentSession().then((fresh) => {
+      if (fresh) setStudentSession(fresh)
+    })
+  }, [])
   const {
     experiments,
     laboratories,
@@ -37,6 +44,7 @@ export function ExperimentPage() {
     recordExperimentVisit,
     bookmarkedExperimentIds,
     toggleBookmarkExperiment,
+    isAdminAuthenticated,
   } = useLabStore()
 
   const [activeTab, setActiveTab] = useState<LearningTab>('all')
@@ -105,6 +113,43 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
 
   const showTheory = activeTab === 'all' || activeTab === 'theory'
   const show3dSchematic = activeTab === 'all' || activeTab === '3d_schematic'
+  const studentAccess = isStudentAccessActive(studentSession)
+  if (!isAdminAuthenticated && !studentAccess.active) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-14">
+        <Card className="p-8 text-center space-y-5 border-2 border-teal-600/20">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto font-extrabold text-xl">
+            🔒
+          </div>
+          <div className="space-y-1.5">
+            <Badge tone="amber">Student Login Required</Badge>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              {exp.title}
+            </h1>
+            <p className="text-sm text-slate-600">
+              {studentAccess.reason === 'pending'
+                ? 'Your student account is currently pending Admin approval. Please check back once approved.'
+                : studentAccess.reason === 'expired'
+                ? 'Your approved student access period has expired. Please contact the Admin to renew.'
+                : studentAccess.reason === 'declined'
+                ? 'Your student access request was declined by the Admin.'
+                : 'Public visitors can browse lab and experiment titles. Please log in or register as a student to open this experiment.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link to={`/student-login?redirect=/experiment/${exp.slug}`}>
+              <Button variant="primary">
+                {studentSession ? 'Check Student Status' : 'Student Login / Register'}
+              </Button>
+            </Link>
+            <Link to="/experiments">
+              <Button variant="outline">Back to Experiments</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    )
+  }
   const showSimulation = activeTab === 'all' || activeTab === 'simulation'
   const showVivaDownloads = activeTab === 'all' || activeTab === 'viva_downloads'
 

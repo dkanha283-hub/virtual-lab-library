@@ -15,6 +15,7 @@ import { LaboratoryPage } from './pages/LaboratoryPage'
 import { ExperimentPage } from './pages/ExperimentPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminLoginPage } from './pages/AdminLoginPage'
+import { StudentAuthPage } from './pages/StudentAuthPage'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<AdminLoginPage />} />
+        <Route path="/student-login" element={<StudentAuthPage />} />
         <Route path="/departments" element={<AllDepartmentsPage />} />
         <Route path="/laboratories" element={<AllLaboratoriesPage />} />
         <Route path="/experiments" element={<AllExperimentsPage />} />

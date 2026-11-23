@@ -1,3 +1,4 @@
+import { StudentApprovalsPanel } from '../components/admin/StudentApprovalsPanel'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -224,6 +225,8 @@ export function AdminPage() {
           <span>{statusBanner}</span>
         </div>
       )}
+
+      <StudentApprovalsPanel />
 
       {/* Quick Upload 3D Model / Virtual Lab by HTML Code (Synced to Supabase) */}
       <Card className="p-6 space-y-4 border-2 border-teal-600/30">
