@@ -34,9 +34,9 @@ function cleanBullet(line: string): string {
 
 function extractStep1Field(step1Text: string, labelPattern: string): string {
   const regex = new RegExp(
-    '(?:^|\n)\s*(?:[*•\-]\s*)?(?:\*\*)?' +
+    '(?:^|\\n)\\s*(?:[*•\\-]\\s*)?(?:\\*\\*)?' +
       labelPattern +
-      '(?:\*\*)?\s*:\s*([^\n]+)',
+      '(?:\\*\\*)?\\s*:\\s*([^\\n]+)',
     'i'
   )
   const match = step1Text.match(regex)
@@ -44,13 +44,19 @@ function extractStep1Field(step1Text: string, labelPattern: string): string {
 }
 
 function extractNumberedSection(step2Text: string, num: number, nextNum?: number): string {
-  const startRegex = new RegExp('(?:^|\n)\s*(?:#+\s*)?(?:\*\*)?' + num + '\.\s+[^\n]+', 'i')
+  const startRegex = new RegExp(
+    '(?:^|\\n)\\s*(?:#+\\s*)?(?:\\*\\*)?' + num + '\\.\\s+[^\\n]+',
+    'i'
+  )
   const startMatch = startRegex.exec(step2Text)
   if (!startMatch) return ''
   const contentStart = startMatch.index + startMatch[0].length
   if (!nextNum) return step2Text.slice(contentStart).trim()
 
-  const endRegex = new RegExp('(?:^|\n)\s*(?:#+\s*)?(?:\*\*)?' + nextNum + '\.\s+[^\n]+', 'i')
+  const endRegex = new RegExp(
+    '(?:^|\\n)\\s*(?:#+\\s*)?(?:\\*\\*)?' + nextNum + '\\.\\s+[^\\n]+',
+    'i'
+  )
   const rest = step2Text.slice(contentStart)
   const endMatch = endRegex.exec(rest)
   return (endMatch ? rest.slice(0, endMatch.index) : rest).trim()
@@ -68,9 +74,7 @@ function parseMarkdownTable(block: string): string[][] {
       .slice(1, -1)
       .split('|')
       .map((c) => c.trim())
-    // Skip header separator row like |---|---|
     if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue
-    // Skip first header row
     if (i === 0) continue
     if (cells.some((c) => c.length > 0)) rows.push(cells)
   }
@@ -133,19 +137,19 @@ export function parseAiExperimentInfo(
     result.filledCount++
   }
 
-  const codeRaw = extractStep1Field(step1Text, 'Course\s*\/\s*Experiment Code|Experiment Code|Course Code')
+  const codeRaw = extractStep1Field(step1Text, 'Course\\s*\\/\\s*Experiment Code|Experiment Code|Course Code')
   if (codeRaw) {
     result.code = codeRaw.replace(/\s*\(Suggested[^)]*\)/i, '').trim()
     result.filledCount++
   }
 
-  const titleRaw = extractStep1Field(step1Text, 'Experiment Name\s*\/\s*Title|Experiment Title|Experiment Name')
+  const titleRaw = extractStep1Field(step1Text, 'Experiment Name\\s*\\/\\s*Title|Experiment Title|Experiment Name')
   if (titleRaw) {
     result.title = titleRaw
     result.filledCount++
   }
 
-  const summaryRaw = extractStep1Field(step1Text, 'Short Description\s*\/\s*Executive Overview|Short Description|Executive Overview')
+  const summaryRaw = extractStep1Field(step1Text, 'Short Description\\s*\\/\\s*Executive Overview|Short Description|Executive Overview')
   if (summaryRaw) {
     result.summary = summaryRaw
     result.filledCount++
@@ -170,7 +174,7 @@ export function parseAiExperimentInfo(
     result.filledCount++
   }
 
-  const durRaw = extractStep1Field(step1Text, 'Duration\s*\(Minutes\)|Duration')
+  const durRaw = extractStep1Field(step1Text, 'Duration\\s*\\(Minutes\\)|Duration')
   const durMatch = durRaw.match(/(\d+)/)
   if (durMatch) {
     result.estimatedMinutes = Number(durMatch[1])
@@ -250,7 +254,7 @@ export function parseAiExperimentInfo(
             : ''
         return {
           label: nameM ? nameM[1].trim() : 'Equation',
-          formula: (copyM ? copyM[1].trim() : latexM ? latexM[1].trim() : ''),
+          formula: copyM ? copyM[1].trim() : latexM ? latexM[1].trim() : '',
           variables: vars,
         }
       })
