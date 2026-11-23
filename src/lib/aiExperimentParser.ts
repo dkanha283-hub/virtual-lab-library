@@ -34,9 +34,9 @@ function cleanBullet(line: string): string {
 
 function extractStep1Field(step1Text: string, labelPattern: string): string {
   const regex = new RegExp(
-    '(?:^|\\n)\\s*(?:[*•\\-]\\s*)?(?:\\*\\*)?' +
+    '(?:^|\\n)\\s*(?:[*•\\-]\\s*)?(?:\\*\\*)?(?:' +
       labelPattern +
-      '(?:\\*\\*)?\\s*:\\s*([^\\n]+)',
+      ')(?:\\*\\*)?\\s*:\\s*([^\\n]+)',
     'i'
   )
   const match = step1Text.match(regex)
@@ -211,11 +211,12 @@ export function parseAiExperimentInfo(
     }
   }
 
+  // Apparatus: supports both Markdown tables AND "- Name | Spec | Qty: 1" bullets
   const appSec = extractNumberedSection(step2Text, 3, 4)
   if (appSec) {
-    const rows = parseMarkdownTable(appSec)
-    if (rows.length > 0) {
-      result.apparatus = rows.map((r) => {
+    const tableRows = parseMarkdownTable(appSec)
+    if (tableRows.length > 0) {
+      result.apparatus = tableRows.map((r) => {
         const qtyMatch = (r[2] || '').match(/\d+/)
         return {
           name: r[0] || 'Instrument',
@@ -224,6 +225,23 @@ export function parseAiExperimentInfo(
         }
       })
       result.filledCount++
+    } else {
+      const bulletRows = appSec
+        .split('\n')
+        .map(cleanBullet)
+        .filter((l) => l.includes('|'))
+      if (bulletRows.length > 0) {
+        result.apparatus = bulletRows.map((line) => {
+          const parts = line.split('|').map((p) => p.trim())
+          const qtyMatch = (parts[2] || '').match(/\d+/)
+          return {
+            name: parts[0] || 'Instrument',
+            specification: parts[1] || 'Standard Rating',
+            quantity: qtyMatch ? Number(qtyMatch[0]) : 1,
+          }
+        })
+        result.filledCount++
+      }
     }
   }
 
@@ -233,6 +251,7 @@ export function parseAiExperimentInfo(
     result.filledCount++
   }
 
+  // Equations: supports both "Equation Name:" blocks AND "1. Name: Formula (LaTeX: ...) | Variables"
   const eqSec = extractNumberedSection(step2Text, 5, 6)
   if (eqSec) {
     const eqBlocks = eqSec.split(/(?=Equation Name\s*:)/i).filter((b) => /Equation Name\s*:/i.test(b))
@@ -259,6 +278,26 @@ export function parseAiExperimentInfo(
         }
       })
       result.filledCount++
+    } else {
+      const eqLines = eqSec
+        .split('\n')
+        .map(cleanBullet)
+        .filter((l) => l.includes(':'))
+      if (eqLines.length > 0) {
+        result.equations = eqLines.map((line) => {
+          const [left, right] = line.split('|').map((s) => s.trim())
+          const colonIdx = left.indexOf(':')
+          const label = colonIdx !== -1 ? left.slice(0, colonIdx).trim() : 'Equation'
+          const formulaRaw = colonIdx !== -1 ? left.slice(colonIdx + 1).trim() : left
+          const formula = formulaRaw.replace(/\s*\(LaTeX:[\s\S]*\)\s*$/i, '').trim()
+          return {
+            label,
+            formula,
+            variables: right || '',
+          }
+        })
+        result.filledCount++
+      }
     }
   }
 
@@ -315,6 +354,7 @@ export function parseAiExperimentInfo(
     }
   }
 
+  // Viva-Voce: supports both Markdown tables AND "Q1: ... / A1: ..." pairs
   const vivaSec = extractNumberedSection(step2Text, 12, 13)
   if (vivaSec) {
     const rows = parseMarkdownTable(vivaSec)
@@ -325,6 +365,16 @@ export function parseAiExperimentInfo(
         answer: r[1] || '',
       }))
       result.filledCount++
+    } else {
+      const qaMatches = [...vivaSec.matchAll(/Q\d+\s*:\s*([^\n]+)\n+A\d+\s*:\s*([^\n]+)/gi)]
+      if (qaMatches.length > 0) {
+        result.vivaQuestions = qaMatches.map((m, idx) => ({
+          id: `viva-${Date.now()}-${idx}`,
+          question: m[1].trim(),
+          answer: m[2].trim(),
+        }))
+        result.filledCount++
+      }
     }
   }
 

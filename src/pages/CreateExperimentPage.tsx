@@ -91,7 +91,8 @@ export function CreateExperimentPage() {
   const [aiAutoFillMsg, setAiAutoFillMsg] = useState<string>('')
 
   const handleAiAutoFill = () => {
-    const parsed = parseAiExperimentInfo(aiRawText, departments, laboratories)
+    try {
+      const parsed = parseAiExperimentInfo(aiRawText, departments, laboratories)
     if (parsed.filledCount === 0) {
       setAiAutoFillMsg('Could not detect Step 1 / Step 2 fields. Please paste the structured manual text.')
       return
@@ -121,6 +122,9 @@ export function CreateExperimentPage() {
     if (parsed.vivaQuestions && parsed.vivaQuestions.length > 0) setVivaQuestions(parsed.vivaQuestions)
     if (parsed.referencesText) setReferencesText(parsed.referencesText)
     setAiAutoFillMsg(`Auto-filled ${parsed.filledCount} sections across Step 1 & Step 2! Review and proceed to Step 3.`)
+    } catch (err) {
+      setAiAutoFillMsg('Auto-fill error: ' + (err instanceof Error ? err.message : String(err)))
+    }
   }
 
   // Step 1 State
@@ -668,7 +672,7 @@ export function CreateExperimentPage() {
                   Clear
                 </Button>
               )}
-              <Button variant="primary" size="sm" onClick={handleAiAutoFill}>
+              <Button type="button" variant="primary" size="sm" onClick={handleAiAutoFill}>
                 Auto-Fill Step 1 &amp; 2
               </Button>
             </div>
