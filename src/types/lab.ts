@@ -108,6 +108,10 @@ export interface Experiment {
   simulationSource?: 'preset' | 'custom_html'
   simulationPreset: SimulationPresetId
   customSimulationHtml?: string
+  driveFolderPath?: string
+  drive3dFileId?: string
+  driveSimFileId?: string
+  driveDiagramFileId?: string
   procedure: string[]
   sampleCalculations: string
   resultsTemplate: string
