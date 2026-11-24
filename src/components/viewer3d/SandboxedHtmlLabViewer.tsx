@@ -8,6 +8,14 @@ interface Props {
   kind?: '3D Model' | 'Virtual Lab Simulation'
 }
 
+function isAppleTouchDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
 export function SandboxedHtmlLabViewer({
   htmlCode,
   title,
@@ -19,6 +27,10 @@ export function SandboxedHtmlLabViewer({
 
   const enterFullscreen = async () => {
     setIsFullscreen(true)
+    // Skip native Fullscreen API on iPad/iOS because Safari's built-in
+    // drag-down gesture exits native fullscreen during 3D/touch interactions.
+    if (isAppleTouchDevice()) return
+
     const el = containerRef.current as (HTMLDivElement & {
       webkitRequestFullscreen?: () => Promise<void> | void
     }) | null
@@ -29,7 +41,7 @@ export function SandboxedHtmlLabViewer({
         await el.webkitRequestFullscreen()
       }
     } catch {
-      // Fallback to edge-to-edge fixed 100dvh overlay (e.g., iOS Safari)
+      // Fallback to edge-to-edge fixed 100dvh overlay
     }
   }
 
@@ -60,6 +72,7 @@ export function SandboxedHtmlLabViewer({
 
   useEffect(() => {
     const handleFsChange = () => {
+      if (isAppleTouchDevice()) return
       const doc = document as Document & { webkitFullscreenElement?: Element | null }
       if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
         setIsFullscreen(false)
@@ -84,10 +97,18 @@ export function SandboxedHtmlLabViewer({
 
   useEffect(() => {
     if (!isFullscreen) return
-    const prevOverflow = document.body.style.overflow
+    const prevBodyOverflow = document.body.style.overflow
+    const prevBodyOverscroll = document.body.style.overscrollBehavior
+    const prevHtmlOverscroll = document.documentElement.style.overscrollBehavior
+
     document.body.style.overflow = 'hidden'
+    document.body.style.overscrollBehavior = 'none'
+    document.documentElement.style.overscrollBehavior = 'none'
+
     return () => {
-      document.body.style.overflow = prevOverflow
+      document.body.style.overflow = prevBodyOverflow
+      document.body.style.overscrollBehavior = prevBodyOverscroll
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll
     }
   }, [isFullscreen])
 
@@ -105,7 +126,7 @@ export function SandboxedHtmlLabViewer({
       className={cn(
         'bg-slate-950 overflow-hidden flex flex-col transition-all relative',
         isFullscreen
-          ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] rounded-none border-0 shadow-none'
+          ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] rounded-none border-0 shadow-none overscroll-none'
           : 'border border-slate-800 rounded-2xl shadow-xl'
       )}
     >
