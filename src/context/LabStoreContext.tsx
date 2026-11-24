@@ -1,3 +1,4 @@
+import { buildExperimentFolderParts, getDriveWebAppUrl, uploadFileToDrive } from '../lib/driveBlueprint'
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { Department, Laboratory, Experiment, UserRole } from '../types/lab'
 import { INITIAL_DEPARTMENTS, INITIAL_LABORATORIES, INITIAL_EXPERIMENTS } from '../data/initialData'
@@ -222,6 +223,35 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     fetchCloudData()
+
+    const channel = supabase!
+      .channel('vll-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'experiments' },
+        () => {
+          fetchCloudData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'laboratories' },
+        () => {
+          fetchCloudData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'departments' },
+        () => {
+          fetchCloudData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase!.removeChannel(channel)
+    }
   }, [])
 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.DEPT, JSON.stringify(departments)) }, [departments])
@@ -327,6 +357,61 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
     if (parentDept) await syncDepartmentToCloud(parentDept)
     if (parentLab) await syncLabToCloud(parentLab)
 
+    let finalExp = { ...exp }
+    const driveUrl = getDriveWebAppUrl()
+    const folderParts = buildExperimentFolderParts({
+      departmentName: parentDept?.name || exp.departmentId,
+      labName: parentLab?.name || exp.labId,
+      experimentCode: exp.code,
+      slug: exp.slug,
+    })
+
+    if (driveUrl) {
+      if (finalExp.customModelHtml && finalExp.customModelHtml.trim().startsWith('<')) {
+        const up3d = await uploadFileToDrive({
+          folderParts,
+          fileName: `${finalExp.slug || finalExp.id}-3d.html`,
+          mimeType: 'text/html',
+          content: finalExp.customModelHtml,
+          webAppUrl: driveUrl,
+        })
+        if (up3d.ok && up3d.fileId) {
+          finalExp = {
+            ...finalExp,
+            driveFolderPath: up3d.folderPath || `Virtual Lab Library Storage/${folderParts.join('/')}`,
+            drive3dFileId: up3d.fileId,
+            customModelHtml: undefined,
+          }
+          setExperiments((prev) => prev.map((e) => (e.id === finalExp.id ? finalExp : e)))
+        }
+      }
+
+      if (finalExp.customSimulationHtml && finalExp.customSimulationHtml.trim().startsWith('<')) {
+        const upSim = await uploadFileToDrive({
+          folderParts,
+          fileName: `${finalExp.slug || finalExp.id}-sim.html`,
+          mimeType: 'text/html',
+          content: finalExp.customSimulationHtml,
+          webAppUrl: driveUrl,
+        })
+        if (upSim.ok && upSim.fileId) {
+          finalExp = {
+            ...finalExp,
+            driveFolderPath: upSim.folderPath || `Virtual Lab Library Storage/${folderParts.join('/')}`,
+            driveSimFileId: upSim.fileId,
+            customSimulationHtml: undefined,
+          }
+          setExperiments((prev) => prev.map((e) => (e.id === finalExp.id ? finalExp : e)))
+        }
+      }
+    }
+
+    const cleanPayload = {
+      ...finalExp,
+      customModelHtml: finalExp.drive3dFileId ? undefined : finalExp.customModelHtml,
+      customSimulationHtml: finalExp.driveSimFileId ? undefined : finalExp.customSimulationHtml,
+    }
+
     const { error } = await supabase!.from('experiments').upsert({
       id: exp.id,
       slug: exp.slug,
@@ -338,7 +423,7 @@ export function LabStoreProvider({ children }: { children: React.ReactNode }) {
       difficulty: exp.difficulty,
       estimated_minutes: exp.estimatedMinutes,
       published: exp.published,
-      payload: exp,
+      payload: cleanPayload,
       updated_at: new Date().toISOString(),
     })
     if (!error) {
