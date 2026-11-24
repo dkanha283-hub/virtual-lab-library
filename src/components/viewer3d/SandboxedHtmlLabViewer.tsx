@@ -103,57 +103,63 @@ export function SandboxedHtmlLabViewer({
     <div
       ref={containerRef}
       className={cn(
-        'bg-slate-950 overflow-hidden flex flex-col transition-all',
+        'bg-slate-950 overflow-hidden flex flex-col transition-all relative',
         isFullscreen
           ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] rounded-none border-0 shadow-none'
           : 'border border-slate-800 rounded-2xl shadow-xl'
       )}
     >
-      {/* Top Toolbar */}
-      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[11px] font-bold shrink-0">
-            <Code2 className="w-3.5 h-3.5" />
-            HTML {kind}
-          </span>
-          <h3 className="text-xs sm:text-sm font-bold text-white truncate">{title}</h3>
+      {/* Top Toolbar: hidden in fullscreen mode */}
+      {!isFullscreen && (
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[11px] font-bold shrink-0">
+              <Code2 className="w-3.5 h-3.5" />
+              HTML {kind}
+            </span>
+            <h3 className="text-xs sm:text-sm font-bold text-white truncate">{title}</h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950 border border-slate-700 text-[10px] font-semibold text-emerald-400">
+              <ShieldCheck className="w-3 h-3" />
+              Sandboxed Isolated Runtime
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
+              title="Reload HTML Lab"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reload
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-600 text-white text-xs font-semibold cursor-pointer"
+            >
+              <Maximize2 className="w-3.5 h-3.5" /> Fullscreen
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950 border border-slate-700 text-[10px] font-semibold text-emerald-400">
-            <ShieldCheck className="w-3 h-3" />
-            Sandboxed Isolated Runtime
-          </span>
+      {/* Compact floating Exit button in fullscreen mode */}
+      {isFullscreen && (
+        <button
+          type="button"
+          onClick={exitFullscreen}
+          className="fixed bottom-3 left-3 z-[10000] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white border border-slate-700/80 backdrop-blur-sm text-xs font-semibold shadow-lg opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
+          title="Exit Fullscreen (Esc)"
+        >
+          <Minimize2 className="w-3.5 h-3.5" /> Exit
+        </button>
+      )}
 
-          <button
-            type="button"
-            onClick={() => setReloadKey((k) => k + 1)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
-            title="Reload HTML Lab"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reload
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-600 text-white text-xs font-semibold cursor-pointer"
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5" /> Exit Fullscreen
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5" /> Fullscreen
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Strictly Sandboxed iframe: allow-scripts ONLY (blocks access to parent localStorage, cookies & DOM) */}
+      {/* Strictly Sandboxed iframe: allow-scripts ONLY */}
       <iframe
         key={reloadKey}
         title={title}
