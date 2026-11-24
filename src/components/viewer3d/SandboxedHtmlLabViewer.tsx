@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Maximize2, Minimize2, RotateCcw, ShieldCheck, Code2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -13,8 +13,83 @@ export function SandboxedHtmlLabViewer({
   title,
   kind = '3D Model',
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+
+  const enterFullscreen = async () => {
+    setIsFullscreen(true)
+    const el = containerRef.current as (HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void
+    }) | null
+    try {
+      if (el?.requestFullscreen) {
+        await el.requestFullscreen()
+      } else if (el?.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen()
+      }
+    } catch {
+      // Fallback to edge-to-edge fixed 100dvh overlay (e.g., iOS Safari)
+    }
+  }
+
+  const exitFullscreen = async () => {
+    setIsFullscreen(false)
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null
+      webkitExitFullscreen?: () => Promise<void> | void
+    }
+    try {
+      if (doc.fullscreenElement && doc.exitFullscreen) {
+        await doc.exitFullscreen()
+      } else if (doc.webkitFullscreenElement && doc.webkitExitFullscreen) {
+        await doc.webkitExitFullscreen()
+      }
+    } catch {
+      // Ignore if already exited
+    }
+  }
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      exitFullscreen()
+    } else {
+      enterFullscreen()
+    }
+  }
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null }
+      if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+        setIsFullscreen(false)
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        exitFullscreen()
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFsChange)
+    document.addEventListener('webkitfullscreenchange', handleFsChange)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange)
+      document.removeEventListener('webkitfullscreenchange', handleFsChange)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFullscreen])
+
+  useEffect(() => {
+    if (!isFullscreen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [isFullscreen])
 
   if (!htmlCode || !htmlCode.trim()) {
     return (
@@ -26,13 +101,16 @@ export function SandboxedHtmlLabViewer({
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        'bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col transition-all',
-        isFullscreen ? 'fixed inset-3 z-50' : ''
+        'bg-slate-950 overflow-hidden flex flex-col transition-all',
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] rounded-none border-0 shadow-none'
+          : 'border border-slate-800 rounded-2xl shadow-xl'
       )}
     >
       {/* Top Toolbar */}
-      <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[11px] font-bold shrink-0">
             <Code2 className="w-3.5 h-3.5" />
@@ -59,7 +137,7 @@ export function SandboxedHtmlLabViewer({
 
           <button
             type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={toggleFullscreen}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-600 text-white text-xs font-semibold cursor-pointer"
           >
             {isFullscreen ? (
@@ -81,6 +159,7 @@ export function SandboxedHtmlLabViewer({
         title={title}
         srcDoc={htmlCode}
         sandbox="allow-scripts"
+        allowFullScreen
         referrerPolicy="no-referrer"
         className={cn(
           'w-full border-0 bg-slate-950',
