@@ -1,3 +1,4 @@
+import { fetchFileFromDrive } from '../lib/driveBlueprint'
 import { getSavedStudentSession, isStudentAccessActive, refreshStudentSession, StudentAccount } from '../lib/studentAuth'
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -29,11 +30,15 @@ type LearningTab = 'all' | 'theory' | '3d_schematic' | 'simulation' | 'viva_down
 export function ExperimentPage() {
   const { expSlug } = useParams()
   const [studentSession, setStudentSession] = useState<StudentAccount | null>(() => getSavedStudentSession())
+  const [drive3dHtml, setDrive3dHtml] = useState<string>('')
+  const [driveSimHtml, setDriveSimHtml] = useState<string>('')
+  const [driveLoadingMsg, setDriveLoadingMsg] = useState<string>('')
   useEffect(() => {
     refreshStudentSession().then((fresh) => {
       if (fresh) setStudentSession(fresh)
     })
   }, [])
+
   const {
     experiments,
     laboratories,
@@ -44,6 +49,37 @@ export function ExperimentPage() {
     toggleBookmarkExperiment,
     isAdminAuthenticated,
   } = useLabStore()
+  useEffect(() => {
+    const expItem = experiments.find((e) => e.slug === expSlug)
+    if (!expItem) return
+    let cancelled = false
+
+    async function resolveDriveBlueprint() {
+      const needs3d = !expItem!.customModelHtml && Boolean(expItem!.drive3dFileId)
+      const needsSim = !expItem!.customSimulationHtml && Boolean(expItem!.driveSimFileId)
+      if (!needs3d && !needsSim) return
+
+      setDriveLoadingMsg('Fetching lab asset from Google Drive via Supabase blueprint...')
+      if (needs3d && expItem!.drive3dFileId) {
+        const res3d = await fetchFileFromDrive(expItem!.drive3dFileId)
+        if (!cancelled && res3d.ok && res3d.content) {
+          setDrive3dHtml(res3d.content)
+        }
+      }
+      if (needsSim && expItem!.driveSimFileId) {
+        const resSim = await fetchFileFromDrive(expItem!.driveSimFileId)
+        if (!cancelled && resSim.ok && resSim.content) {
+          setDriveSimHtml(resSim.content)
+        }
+      }
+      if (!cancelled) setDriveLoadingMsg('')
+    }
+
+    resolveDriveBlueprint()
+    return () => {
+      cancelled = true
+    }
+  }, [expSlug, experiments])
 
   const [activeTab, setActiveTab] = useState<LearningTab>('all')
   const [liveRpm, setLiveRpm] = useState<number>(1500)
@@ -420,7 +456,12 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
           </Card>
           )}
 
-          {exp.has3dModel && (
+          {driveLoadingMsg && (
+                <div className="mb-3 px-3.5 py-2 rounded-xl bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-800">
+                  {driveLoadingMsg}
+                </div>
+              )}
+              {exp.has3dModel && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-extrabold text-slate-900">
@@ -430,9 +471,9 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   <Badge mono tone="teal">Custom GLB: {exp.customGlbUrl}</Badge>
                 )}
               </div>
-              {exp.model3dSource === 'custom_html' && exp.customModelHtml ? (
+              {exp.model3dSource === 'custom_html' && (exp.customModelHtml || drive3dHtml) ? (
                 <SandboxedHtmlLabViewer
-                  htmlCode={exp.customModelHtml}
+                  htmlCode={(exp.customModelHtml || drive3dHtml)}
                   title={exp.title}
                   kind="3D Model"
                 />
@@ -452,9 +493,9 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
               <h2 className="text-lg font-extrabold text-slate-900">
                 Virtual Laboratory Simulator, Real-Time Graphs &amp; Observation Table
               </h2>
-              {exp.simulationSource === 'custom_html' && exp.customSimulationHtml ? (
+              {exp.simulationSource === 'custom_html' && (exp.customSimulationHtml || driveSimHtml) ? (
                 <SandboxedHtmlLabViewer
-                  htmlCode={exp.customSimulationHtml}
+                  htmlCode={(exp.customSimulationHtml || driveSimHtml)}
                   title={`${exp.title} — Virtual Lab`}
                   kind="Virtual Lab Simulation"
                 />
