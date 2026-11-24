@@ -1,3 +1,4 @@
+import { getDriveWebAppUrl, saveDriveWebAppUrl } from '../lib/driveBlueprint'
 import { StudentApprovalsPanel } from '../components/admin/StudentApprovalsPanel'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import React, { useState } from 'react'
@@ -58,6 +59,7 @@ export function AdminPage() {
   })
 
   const [statusBanner, setStatusBanner] = useState<string>('')
+  const [driveUrlInput, setDriveUrlInput] = useState<string>(() => getDriveWebAppUrl())
   const [editingLabId, setEditingLabId] = useState<string | null>(null)
   const [editLabIncharge, setEditLabIncharge] = useState<string>('')
   const [editLabRoom, setEditLabRoom] = useState<string>('')
@@ -220,6 +222,38 @@ export function AdminPage() {
       )}
 
       <StudentApprovalsPanel />
+
+            {/* Google Drive Storage Room Blueprint Config */}
+      <Card className="p-6 space-y-3 border-2 border-teal-600/20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
+              Google Drive Storage Room (Supabase Blueprint Bridge)
+            </h2>
+            <p className="text-xs text-slate-500">
+              Connect your Google Apps Script Web App URL so Google Drive stores heavy files in structured folders while Supabase keeps the directory &amp; file ID map.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              saveDriveWebAppUrl(driveUrlInput)
+              setStatusBanner('Saved Google Drive Storage Room Web App URL.')
+            }}
+          >
+            Save Drive URL
+          </Button>
+        </div>
+        <input
+          type="url"
+          value={driveUrlInput}
+          onChange={(e) => setDriveUrlInput(e.target.value)}
+          placeholder="https://script.google.com/macros/s/.../exec"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900"
+        />
+      </Card>
 
       {/* Quick Upload 3D Model / Virtual Lab by HTML Code (Synced to Supabase) */}
       <Card className="p-6 space-y-4 border-2 border-teal-600/30">
