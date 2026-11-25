@@ -36,6 +36,62 @@ export function ExperimentPage() {
   const [liveRpm, setLiveRpm] = useState<number>(1500)
   const [downloadNotice, setDownloadNotice] = useState<string>('')
 
+  const {
+    experiments,
+    laboratories,
+    departments,
+    recordExperimentVisit,
+    bookmarkedExperimentIds,
+    toggleBookmarkExperiment,
+    isAdminAuthenticated,
+    role,
+  } = useLabStore()
+
+  const [drive3dHtml, setDrive3dHtml] = useState<string>('')
+  const [driveSimHtml, setDriveSimHtml] = useState<string>('')
+  const [loadingDriveAssets, setLoadingDriveAssets] = useState<boolean>(false)
+  const [driveLoadingMsg, setDriveLoadingMsg] = useState<string>('')
+
+  useEffect(() => {
+    let cancelled = false
+    const current = experiments.find((e) => e.slug === expSlug)
+    if (!current) return
+
+    const webAppUrl = getDriveWebAppUrl()
+    if (!webAppUrl) return
+
+    const needs3d = Boolean(current.drive3dFileId && !current.customModelHtml)
+    const needsSim = Boolean(current.driveSimFileId && !current.customSimulationHtml)
+    if (!needs3d && !needsSim) return
+
+    setLoadingDriveAssets(true)
+    setDriveLoadingMsg('Loading lab assets from Google Drive Storage Room...')
+
+    Promise.all([
+      needs3d && current.drive3dFileId
+        ? fetchDriveFileContent(current.drive3dFileId, webAppUrl)
+        : Promise.resolve(null),
+      needsSim && current.driveSimFileId
+        ? fetchDriveFileContent(current.driveSimFileId, webAppUrl)
+        : Promise.resolve(null),
+    ])
+      .then(([res3d, resSim]) => {
+        if (cancelled) return
+        if (res3d?.ok && res3d.content) setDrive3dHtml(res3d.content)
+        if (resSim?.ok && resSim.content) setDriveSimHtml(resSim.content)
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingDriveAssets(false)
+          setDriveLoadingMsg('')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [expSlug, experiments])
+
   const exp = experiments.find((e) => e.slug === expSlug) || experiments[0]
   const lab = laboratories.find((l) => l.id === exp?.labId)
   const dept = departments.find((d) => d.id === exp?.departmentId)
@@ -451,7 +507,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   kind="Virtual Lab Simulation"
                 />
               ) : (
-                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : '{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : 'No custom HTML simulator uploaded for this experiment.'}'}</div>
+                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : 'No custom HTML simulator uploaded for this experiment.'}</div>
               )}
             </div>
           )}
