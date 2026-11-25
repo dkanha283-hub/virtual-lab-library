@@ -119,3 +119,35 @@ export async function fetchFileFromDrive(
     }
   }
 }
+
+
+export async function fetchDriveFileContent(
+  fileId: string,
+  customWebAppUrl?: string
+): Promise<DriveFileContentResponse> {
+  const cleanId = (fileId || "").trim()
+  if (!cleanId) {
+    return { ok: false, error: "Missing Google Drive fileId" }
+  }
+  const baseUrl = (customWebAppUrl || getDriveWebAppUrl() || "").trim()
+  if (!baseUrl) {
+    return { ok: false, error: "Google Drive Web App URL is not configured" }
+  }
+  if (fileContentCache.has(cleanId)) {
+    return { ok: true, fileId: cleanId, content: fileContentCache.get(cleanId) }
+  }
+  try {
+    const sep = baseUrl.includes("?") ? "&" : "?"
+    const res = await fetch(`${baseUrl}${sep}fileId=${encodeURIComponent(cleanId)}`, {
+      method: "GET",
+      redirect: "follow",
+    })
+    const data = await res.json()
+    if (data && data.ok && typeof data.content === "string") {
+      fileContentCache.set(cleanId, data.content)
+    }
+    return data
+  } catch (err: any) {
+    return { ok: false, error: err?.message || "Failed to fetch file from Google Drive" }
+  }
+}

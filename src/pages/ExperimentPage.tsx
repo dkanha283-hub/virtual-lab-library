@@ -451,7 +451,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   kind="Virtual Lab Simulation"
                 />
               ) : (
-                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : 'No custom HTML simulator uploaded for this experiment.'}</div>
+                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : '{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : 'No custom HTML simulator uploaded for this experiment.'}'}</div>
               )}
             </div>
           )}
