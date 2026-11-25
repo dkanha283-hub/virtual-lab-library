@@ -1,3 +1,4 @@
+import { fetchDriveFileContent, getDriveWebAppUrl } from '../lib/driveBlueprint'
 import { fetchFileFromDrive } from '../lib/driveBlueprint'
 import { getSavedStudentSession, isStudentAccessActive, refreshStudentSession, StudentAccount } from '../lib/studentAuth'
 import { useState, useEffect } from 'react'
@@ -30,56 +31,6 @@ type LearningTab = 'all' | 'theory' | '3d_schematic' | 'simulation' | 'viva_down
 export function ExperimentPage() {
   const { expSlug } = useParams()
   const [studentSession, setStudentSession] = useState<StudentAccount | null>(() => getSavedStudentSession())
-  const [drive3dHtml, setDrive3dHtml] = useState<string>('')
-  const [driveSimHtml, setDriveSimHtml] = useState<string>('')
-  const [driveLoadingMsg, setDriveLoadingMsg] = useState<string>('')
-  useEffect(() => {
-    refreshStudentSession().then((fresh) => {
-      if (fresh) setStudentSession(fresh)
-    })
-  }, [])
-
-  const {
-    experiments,
-    laboratories,
-    departments,
-    role,
-    recordExperimentVisit,
-    bookmarkedExperimentIds,
-    toggleBookmarkExperiment,
-    isAdminAuthenticated,
-  } = useLabStore()
-  useEffect(() => {
-    const expItem = experiments.find((e) => e.slug === expSlug)
-    if (!expItem) return
-    let cancelled = false
-
-    async function resolveDriveBlueprint() {
-      const needs3d = !expItem!.customModelHtml && Boolean(expItem!.drive3dFileId)
-      const needsSim = !expItem!.customSimulationHtml && Boolean(expItem!.driveSimFileId)
-      if (!needs3d && !needsSim) return
-
-      setDriveLoadingMsg('Fetching lab asset from Google Drive via Supabase blueprint...')
-      if (needs3d && expItem!.drive3dFileId) {
-        const res3d = await fetchFileFromDrive(expItem!.drive3dFileId)
-        if (!cancelled && res3d.ok && res3d.content) {
-          setDrive3dHtml(res3d.content)
-        }
-      }
-      if (needsSim && expItem!.driveSimFileId) {
-        const resSim = await fetchFileFromDrive(expItem!.driveSimFileId)
-        if (!cancelled && resSim.ok && resSim.content) {
-          setDriveSimHtml(resSim.content)
-        }
-      }
-      if (!cancelled) setDriveLoadingMsg('')
-    }
-
-    resolveDriveBlueprint()
-    return () => {
-      cancelled = true
-    }
-  }, [expSlug, experiments])
 
   const [activeTab, setActiveTab] = useState<LearningTab>('all')
   const [liveRpm, setLiveRpm] = useState<number>(1500)
@@ -500,7 +451,7 @@ ${exp.precautions.map((p, i) => `   ${i + 1}. ${p}`).join('\n')}
                   kind="Virtual Lab Simulation"
                 />
               ) : (
-                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">No custom HTML simulator uploaded for this experiment.</div>
+                <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-500">{loadingDriveAssets ? 'Loading simulator from Google Drive Storage Room...' : 'No custom HTML simulator uploaded for this experiment.'}</div>
               )}
             </div>
           )}
